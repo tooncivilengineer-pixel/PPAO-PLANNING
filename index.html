@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบบริหารโครงการประสานแผนพัฒนาท้องถิ่น</title>
+    <title>ระบบแผนที่</title>
     
     <!-- Leaflet CSS & JS สำหรับระบบแผนที่ -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -40,32 +40,9 @@
         .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-        /* สไตล์สำหรับปุ่ม Custom บน Leaflet (Street View) */
-        .leaflet-control-custom {
-            background-color: #fff;
-            width: 34px;
-            height: 34px;
-            border-radius: 4px;
-            box-shadow: 0 1px 5px rgba(0,0,0,0.65);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .leaflet-control-custom:hover {
-            background-color: #f4f4f4;
-        }
     </style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden bg-gray-100">
-
-    <!-- แถบแจ้งเตือนอัจฉริยะ (Toast) -->
-    <div id="sysToast" class="fixed top-5 right-5 z-[9999] bg-white border-l-4 shadow-xl px-4 py-3 rounded transition-all duration-300 translate-x-[150%] opacity-0 flex items-center gap-3 min-w-[250px] pointer-events-none">
-        <i id="sysToastIcon" class="fa-solid fa-info-circle text-xl"></i>
-        <div id="sysToastMsg" class="text-sm font-bold text-gray-700"></div>
-    </div>
 
     <!-- แถบ Header สีน้ำเงินด้านบน -->
     <header class="bg-blue-700 text-white px-6 py-3 shadow-md z-[1000] relative flex items-center shrink-0">
@@ -88,35 +65,37 @@
         <div class="absolute top-6 left-6 z-[500] flex flex-col gap-2 w-64 pointer-events-none">
             
             <!-- 1. ป้อนรายละเอียดโครงการ -->
-            <button onclick="openProposalForm()" class="pointer-events-auto bg-white/95 backdrop-blur-sm shadow-md border border-gray-200 hover:bg-blue-50 text-blue-700 font-bold py-3 px-4 rounded-lg text-sm flex items-center justify-start transition-all active:scale-95">
+            <button onclick="window.openProposalForm()" class="pointer-events-auto bg-white/95 backdrop-blur-sm shadow-md border border-gray-200 hover:bg-blue-50 text-blue-700 font-bold py-3 px-4 rounded-lg text-sm flex items-center justify-start transition-all active:scale-95">
                 <i class="fa-solid fa-file-circle-plus w-6 text-center mr-3 text-lg"></i> ป้อนรายละเอียดโครงการ
             </button>
 
             <!-- 2. ค้นหา/แก้ไขโครงการ -->
-            <div class="pointer-events-auto">
-                <button onclick="toggleDistrictMenu()" class="w-full bg-white/95 backdrop-blur-sm shadow-md border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-lg text-sm flex items-center justify-between transition-all active:scale-95">
+            <div class="pointer-events-auto flex flex-col">
+                <button onclick="window.toggleDistrictMenu()" class="w-full bg-white/95 backdrop-blur-sm shadow-md border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-lg text-sm flex items-center justify-between transition-all active:scale-95">
                     <div class="flex items-center">
-                        <i class="fa-solid fa-magnifying-glass-location w-6 text-center mr-3 text-lg"></i> ค้นหา / แก้ไขโครงการ
+                        <i class="fa-solid fa-magnifying-glass-location w-6 text-center mr-3 text-lg"></i> ค้นหาโครงการ
                     </div>
                     <i id="districtMenuIcon" class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300"></i>
                 </button>
                 
                 <!-- Sub-menu รายชื่อ 9 อำเภอ -->
-                <div id="districtMenu" class="hidden flex-col gap-1 mt-1 pl-3 pr-1 py-1 max-h-48 overflow-y-auto custom-scroll">
-                    <button onclick="window.showToast('เปิดค้นหาโครงการ: เมืองพิษณุโลก', 'info')" class="bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 py-2 px-3 rounded text-xs text-left shadow-sm transition-colors flex items-center w-full"><i class="fa-solid fa-caret-right mr-2 text-gray-400"></i> เมืองพิษณุโลก</button>
-                    <button onclick="window.showToast('เปิดค้นหาโครงการ: นครไทย', 'info')" class="bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 py-2 px-3 rounded text-xs text-left shadow-sm transition-colors flex items-center w-full"><i class="fa-solid fa-caret-right mr-2 text-gray-400"></i> นครไทย</button>
-                    <button onclick="window.showToast('เปิดค้นหาโครงการ: ชาติตระการ', 'info')" class="bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 py-2 px-3 rounded text-xs text-left shadow-sm transition-colors flex items-center w-full"><i class="fa-solid fa-caret-right mr-2 text-gray-400"></i> ชาติตระการ</button>
-                    <button onclick="window.showToast('เปิดค้นหาโครงการ: บางระกำ', 'info')" class="bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 py-2 px-3 rounded text-xs text-left shadow-sm transition-colors flex items-center w-full"><i class="fa-solid fa-caret-right mr-2 text-gray-400"></i> บางระกำ</button>
-                    <button onclick="window.showToast('เปิดค้นหาโครงการ: บางกระทุ่ม', 'info')" class="bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 py-2 px-3 rounded text-xs text-left shadow-sm transition-colors flex items-center w-full"><i class="fa-solid fa-caret-right mr-2 text-gray-400"></i> บางกระทุ่ม</button>
-                    <button onclick="window.showToast('เปิดค้นหาโครงการ: พรหมพิราม', 'info')" class="bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 py-2 px-3 rounded text-xs text-left shadow-sm transition-colors flex items-center w-full"><i class="fa-solid fa-caret-right mr-2 text-gray-400"></i> พรหมพิราม</button>
-                    <button onclick="window.showToast('เปิดค้นหาโครงการ: วัดโบสถ์', 'info')" class="bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 py-2 px-3 rounded text-xs text-left shadow-sm transition-colors flex items-center w-full"><i class="fa-solid fa-caret-right mr-2 text-gray-400"></i> วัดโบสถ์</button>
-                    <button onclick="window.showToast('เปิดค้นหาโครงการ: วังทอง', 'info')" class="bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 py-2 px-3 rounded text-xs text-left shadow-sm transition-colors flex items-center w-full"><i class="fa-solid fa-caret-right mr-2 text-gray-400"></i> วังทอง</button>
-                    <button onclick="window.showToast('เปิดค้นหาโครงการ: เนินมะปราง', 'info')" class="bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 py-2 px-3 rounded text-xs text-left shadow-sm transition-colors flex items-center w-full"><i class="fa-solid fa-caret-right mr-2 text-gray-400"></i> เนินมะปราง</button>
+                <div id="districtMenu" class="hidden flex-col gap-1 mt-2 p-2 max-h-56 overflow-y-auto custom-scroll bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-inner">
+                    <button onclick="window.openSearchModal('')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold border border-indigo-200 py-2 px-3 rounded text-xs text-left shadow-sm transition-colors flex items-center w-full"><i class="fa-solid fa-list-check mr-2"></i> ดูข้อมูลทุกอำเภอ</button>
+                    <hr class="my-1 border-gray-200">
+                    <button onclick="window.openSearchModal('เมืองพิษณุโลก')" class="bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 py-2 px-3 rounded text-xs text-left shadow-sm transition-colors flex items-center w-full"><i class="fa-solid fa-caret-right mr-2 text-gray-400"></i> เมืองพิษณุโลก</button>
+                    <button onclick="window.openSearchModal('นครไทย')" class="bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 py-2 px-3 rounded text-xs text-left shadow-sm transition-colors flex items-center w-full"><i class="fa-solid fa-caret-right mr-2 text-gray-400"></i> นครไทย</button>
+                    <button onclick="window.openSearchModal('ชาติตระการ')" class="bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 py-2 px-3 rounded text-xs text-left shadow-sm transition-colors flex items-center w-full"><i class="fa-solid fa-caret-right mr-2 text-gray-400"></i> ชาติตระการ</button>
+                    <button onclick="window.openSearchModal('บางระกำ')" class="bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 py-2 px-3 rounded text-xs text-left shadow-sm transition-colors flex items-center w-full"><i class="fa-solid fa-caret-right mr-2 text-gray-400"></i> บางระกำ</button>
+                    <button onclick="window.openSearchModal('บางกระทุ่ม')" class="bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 py-2 px-3 rounded text-xs text-left shadow-sm transition-colors flex items-center w-full"><i class="fa-solid fa-caret-right mr-2 text-gray-400"></i> บางกระทุ่ม</button>
+                    <button onclick="window.openSearchModal('พรหมพิราม')" class="bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 py-2 px-3 rounded text-xs text-left shadow-sm transition-colors flex items-center w-full"><i class="fa-solid fa-caret-right mr-2 text-gray-400"></i> พรหมพิราม</button>
+                    <button onclick="window.openSearchModal('วัดโบสถ์')" class="bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 py-2 px-3 rounded text-xs text-left shadow-sm transition-colors flex items-center w-full"><i class="fa-solid fa-caret-right mr-2 text-gray-400"></i> วัดโบสถ์</button>
+                    <button onclick="window.openSearchModal('วังทอง')" class="bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 py-2 px-3 rounded text-xs text-left shadow-sm transition-colors flex items-center w-full"><i class="fa-solid fa-caret-right mr-2 text-gray-400"></i> วังทอง</button>
+                    <button onclick="window.openSearchModal('เนินมะปราง')" class="bg-white hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 py-2 px-3 rounded text-xs text-left shadow-sm transition-colors flex items-center w-full"><i class="fa-solid fa-caret-right mr-2 text-gray-400"></i> เนินมะปราง</button>
                 </div>
             </div>
 
             <!-- 3. จัดการข้อมูล -->
-            <button onclick="openManageDataModal()" class="pointer-events-auto bg-white/95 backdrop-blur-sm shadow-md border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-lg text-sm flex items-center justify-start transition-all active:scale-95">
+            <button onclick="window.openManageDataModal()" class="pointer-events-auto bg-white/95 backdrop-blur-sm shadow-md border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-lg text-sm flex items-center justify-start transition-all active:scale-95">
                 <i class="fa-solid fa-database w-6 text-center mr-3 text-lg text-emerald-600"></i> จัดการข้อมูล
             </button>
 
@@ -150,15 +129,84 @@
             <i class="fa-solid fa-location-crosshairs fa-spin text-xl"></i> กรุณาเลื่อนแผนที่และคลิกเพื่อระบุพิกัด
         </div>
 
-        <!-- หน้าต่างแจ้งเตือนให้คลิกเพื่อดู Street View -->
-        <div id="streetViewOverlay" class="absolute top-6 left-1/2 transform -translate-x-1/2 z-[2000] bg-orange-500 text-white px-6 py-3 rounded-full shadow-2xl font-bold flex items-center gap-3 hidden pointer-events-none transition-all">
-            <i class="fa-solid fa-street-view text-xl"></i> คลิกบนแผนที่บริเวณถนนเพื่อเปิด Street View
-        </div>
-
     </div>
 
     <!-- ========================================== -->
-    <!-- MODAL 1: ฟอร์มป้อนรายละเอียดโครงการเสนอขอ -->
+    <!-- MODAL: ค้นหาและดูรายการโครงการ (Search)   -->
+    <!-- ========================================== -->
+    <div id="searchModal" class="fixed inset-0 bg-gray-900/60 z-[3000] hidden items-center justify-center p-4 md:p-6 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+            <!-- Header -->
+            <div class="bg-indigo-700 text-white px-6 py-4 flex justify-between items-center shrink-0 shadow-sm z-10">
+                <div>
+                    <h3 class="font-bold text-lg flex items-center" id="searchModalTitle">
+                        <i class="fa-solid fa-magnifying-glass-location mr-2"></i> ค้นหาข้อมูลโครงการ
+                    </h3>
+                    <p class="text-indigo-200 text-xs font-medium mt-0.5">ระบบจะดึงข้อมูลโครงการที่บันทึกแล้วในฐานข้อมูล</p>
+                </div>
+                <button onclick="window.closeSearchModal()" class="text-indigo-200 hover:text-white bg-indigo-800 hover:bg-indigo-900 rounded-full w-8 h-8 flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <!-- Body -->
+            <div class="p-6 bg-slate-50 flex flex-col flex-1 overflow-hidden">
+                <div class="mb-4">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-search text-gray-400"></i>
+                        </div>
+                        <input type="text" id="searchInput" onkeyup="window.renderSearchList()" placeholder="พิมพ์เพื่อค้นหา: อำเภอ, ชื่อโครงการ, ชื่อหน่วยงาน, ลักษณะโครงการ..." class="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition shadow-sm">
+                    </div>
+                </div>
+                
+                <div class="flex-1 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-sm custom-scroll">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead class="bg-gray-100 text-gray-700 sticky top-0 border-b border-gray-200 z-10">
+                            <tr>
+                                <th class="p-3 font-bold border-r border-gray-200 w-12 text-center">ลำดับ</th>
+                                <th class="p-3 font-bold border-r border-gray-200 w-24">อำเภอ</th>
+                                <th class="p-3 font-bold border-r border-gray-200">ชื่อโครงการ</th>
+                                <th class="p-3 font-bold border-r border-gray-200">หน่วยงานที่ขอ</th>
+                                <th class="p-3 font-bold border-r border-gray-200 text-right">งบประมาณ (ปีล่าสุด)</th>
+                                <th class="p-3 font-bold border-r border-gray-200 text-center">สถานะ</th>
+                                <th class="p-3 font-bold text-center w-32">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="searchListBody">
+                            <tr><td colspan="7" class="p-6 text-center text-gray-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังโหลดข้อมูล...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Footer -->
+            <div class="bg-white px-6 py-4 border-t border-gray-200 flex justify-between items-center shrink-0">
+                <span class="text-sm text-gray-500" id="searchResultCount">พบทั้งหมด 0 รายการ</span>
+                <button type="button" onclick="window.closeSearchModal()" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-bold transition">ปิดหน้าต่าง</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: ยืนยันการลบโครงการ (Delete Confirm)  -->
+    <!-- ========================================== -->
+    <div id="deleteConfirmModal" class="fixed inset-0 bg-black/50 z-[4000] hidden items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full text-center">
+            <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h2 class="text-xl font-bold text-gray-900 mb-2">ยืนยันการลบข้อมูล</h2>
+            <p class="text-sm text-gray-500 mb-6">คุณแน่ใจหรือไม่ว่าต้องการลบโครงการนี้?<br>ข้อมูลที่ลบแล้วจะไม่สามารถกู้คืนได้</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="window.closeDeleteModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-bold transition shadow-sm">ยกเลิก</button>
+                <button id="confirmDeleteBtn" onclick="window.confirmDeleteFromCloud()" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold transition flex items-center justify-center shadow-sm">
+                    <i class="fa-solid fa-trash-can mr-2"></i> ลบข้อมูล
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: ฟอร์มรับข้อมูลโครงการ                 -->
     <!-- ========================================== -->
     <div id="proposalModal" class="fixed inset-0 bg-gray-900/60 z-[3000] hidden items-center justify-center p-4 md:p-6 backdrop-blur-sm transition-opacity">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -169,7 +217,7 @@
                     <h3 class="font-bold text-lg flex items-center"><i class="fa-solid fa-file-signature mr-2"></i> รายละเอียดโครงการประสานแผน อปท.</h3>
                     <p class="text-blue-200 text-xs font-medium mt-0.5">แบบสรุปรายละเอียดโครงการที่เสนอขอประสานแผน</p>
                 </div>
-                <button onclick="closeProposalForm()" class="text-blue-200 hover:text-white bg-blue-800 hover:bg-blue-900 rounded-full w-8 h-8 flex items-center justify-center transition-colors">
+                <button onclick="window.closeProposalForm()" class="text-blue-200 hover:text-white bg-blue-800 hover:bg-blue-900 rounded-full w-8 h-8 flex items-center justify-center transition-colors">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
@@ -178,22 +226,42 @@
             <div class="p-6 overflow-y-auto custom-scroll bg-slate-50 flex-1">
                 <form id="dataForm" class="space-y-6">
                     
-                    <!-- Section 1: ข้อมูลโครงการ -->
+                    <!-- Section 1: ข้อมูลโครงการ (มีการเพิ่มช่องอำเภอ) -->
                     <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
                         <h4 class="font-bold text-blue-800 border-b border-gray-200 pb-2 mb-4 flex items-center">
                             <i class="fa-solid fa-building-flag mr-2"></i> 1. ข้อมูลโครงการ
                         </h4>
+                        
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="md:col-span-2 flex gap-4">
+                            <!-- เพิ่มช่องเลือกอำเภอ -->
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-1">อำเภอ <span class="text-red-500">*</span></label>
+                                <select id="districtInput" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" required>
+                                    <option value="" disabled selected>-- เลือกอำเภอ --</option>
+                                    <option value="เมืองพิษณุโลก">เมืองพิษณุโลก</option>
+                                    <option value="นครไทย">นครไทย</option>
+                                    <option value="ชาติตระการ">ชาติตระการ</option>
+                                    <option value="บางระกำ">บางระกำ</option>
+                                    <option value="บางกระทุ่ม">บางกระทุ่ม</option>
+                                    <option value="พรหมพิราม">พรหมพิราม</option>
+                                    <option value="วัดโบสถ์">วัดโบสถ์</option>
+                                    <option value="วังทอง">วังทอง</option>
+                                    <option value="เนินมะปราง">เนินมะปราง</option>
+                                </select>
+                            </div>
+                            
+                            <!-- ลำดับที่ และ ชื่อหน่วยงาน -->
+                            <div class="flex gap-4">
                                 <div class="w-24 shrink-0">
                                     <label class="block text-sm font-bold text-gray-700 mb-1">ลำดับที่</label>
                                     <input type="text" id="seqNo" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-center" placeholder="เช่น 1">
                                 </div>
                                 <div class="flex-1">
-                                    <label class="block text-sm font-bold text-gray-700 mb-1">ชื่อหน่วยงานที่ขอประสาน <span class="text-red-500">*</span></label>
-                                    <input type="text" id="agencyName" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" placeholder="เช่น องค์การบริหารส่วนตำบลท่านางงาม">
+                                    <label class="block text-sm font-bold text-gray-700 mb-1">หน่วยงานที่ขอ <span class="text-red-500">*</span></label>
+                                    <input type="text" id="agencyName" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" placeholder="เช่น อบต.ท่านางงาม">
                                 </div>
                             </div>
+                            
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 mb-1">ชื่อโครงการ (เดิม) <span class="text-red-500">*</span></label>
                                 <textarea id="projectNameOld" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none" rows="2" placeholder="ระบุชื่อโครงการเดิม"></textarea>
@@ -221,14 +289,14 @@
                                 <div class="flex-1 w-full grid grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-xs font-bold text-gray-600 mb-1">ละติจูด (Latitude)</label>
-                                        <input type="text" id="latInput" onchange="updateMapFromInput()" class="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 font-mono outline-none focus:ring-2 focus:ring-blue-500 transition" placeholder="ระบุละติจูด">
+                                        <input type="text" id="latInput" oninput="window.updateMapFromInput()" class="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 font-mono outline-none focus:ring-2 focus:ring-blue-500 transition" placeholder="ระบุละติจูด">
                                     </div>
                                     <div>
                                         <label class="block text-xs font-bold text-gray-600 mb-1">ลองจิจูด (Longitude)</label>
-                                        <input type="text" id="lngInput" onchange="updateMapFromInput()" class="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 font-mono outline-none focus:ring-2 focus:ring-blue-500 transition" placeholder="ระบุลองจิจูด">
+                                        <input type="text" id="lngInput" oninput="window.updateMapFromInput()" class="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 font-mono outline-none focus:ring-2 focus:ring-blue-500 transition" placeholder="ระบุลองจิจูด">
                                     </div>
                                 </div>
-                                <button type="button" onclick="startPickingLocation()" class="w-full md:w-auto bg-blue-600 text-white font-bold px-5 py-2.5 rounded-md hover:bg-blue-700 transition flex items-center justify-center shadow-sm active:scale-95 shrink-0">
+                                <button type="button" onclick="window.startPickingLocation()" class="w-full md:w-auto bg-blue-600 text-white font-bold px-5 py-2.5 rounded-md hover:bg-blue-700 transition flex items-center justify-center shadow-sm active:scale-95 shrink-0">
                                     <i class="fa-solid fa-location-crosshairs mr-2 text-lg"></i> เลือกพิกัดบนแผนที่
                                 </button>
                             </div>
@@ -243,23 +311,23 @@
                         <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 mb-1 text-center">ปี 2566</label>
-                                <input type="text" id="budget66" oninput="formatNumber(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center focus:ring-2 focus:ring-blue-500 outline-none" placeholder="-">
+                                <input type="text" id="budget66" oninput="window.formatNumber(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center focus:ring-2 focus:ring-blue-500 outline-none" placeholder="-">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 mb-1 text-center">ปี 2567</label>
-                                <input type="text" id="budget67" oninput="formatNumber(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center focus:ring-2 focus:ring-blue-500 outline-none" placeholder="-">
+                                <input type="text" id="budget67" oninput="window.formatNumber(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center focus:ring-2 focus:ring-blue-500 outline-none" placeholder="-">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 mb-1 text-center">ปี 2568</label>
-                                <input type="text" id="budget68" oninput="formatNumber(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center focus:ring-2 focus:ring-blue-500 outline-none" placeholder="-">
+                                <input type="text" id="budget68" oninput="window.formatNumber(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center focus:ring-2 focus:ring-blue-500 outline-none" placeholder="-">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 mb-1 text-center">ปี 2569</label>
-                                <input type="text" id="budget69" oninput="formatNumber(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center font-bold text-blue-700 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="ระบุยอดเงิน">
+                                <input type="text" id="budget69" oninput="window.formatNumber(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center font-bold text-blue-700 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="ระบุยอดเงิน">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 mb-1 text-center">ปี 2570</label>
-                                <input type="text" id="budget70" oninput="formatNumber(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center focus:ring-2 focus:ring-blue-500 outline-none" placeholder="-">
+                                <input type="text" id="budget70" oninput="window.formatNumber(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center focus:ring-2 focus:ring-blue-500 outline-none" placeholder="-">
                             </div>
                         </div>
                     </div>
@@ -272,7 +340,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                             <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-slate-50 rounded transition border border-transparent hover:border-gray-200">
                                 <input type="checkbox" id="chk1" class="peer w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"> 
-                                <span class="font-medium text-gray-700">1. ขนาดพื้นที่เป็นไปตามกรอบฯ <span class="hidden peer-checked:inline text-green-600 font-bold ml-1">ถูกต้อง</span></span>
+                                <span class="font-medium text-gray-700">1. ขนาดพื้นที่เป็นไปตามกรอบการประสานแผนฯ <span class="hidden peer-checked:inline text-green-600 font-bold ml-1">ถูกต้อง</span></span>
                             </label>
                             <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-slate-50 rounded transition border border-transparent hover:border-gray-200">
                                 <input type="checkbox" id="chk2" class="peer w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"> 
@@ -280,7 +348,7 @@
                             </label>
                             <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-slate-50 rounded transition border border-transparent hover:border-gray-200">
                                 <input type="checkbox" id="chk3" class="peer w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"> 
-                                <span class="font-medium text-gray-700">3. ความพร้อมของพื้นที่ดำเนินการ <span class="hidden peer-checked:inline text-green-600 font-bold ml-1">ถูกต้อง</span></span>
+                                <span class="font-medium text-gray-700">3. ความพร้อมของพื้นที่ในการดำเนินการ <span class="hidden peer-checked:inline text-green-600 font-bold ml-1">พร้อม</span></span>
                             </label>
                             <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-slate-50 rounded transition border border-transparent hover:border-gray-200">
                                 <input type="checkbox" id="chk4" class="peer w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"> 
@@ -289,7 +357,7 @@
                             
                             <div class="flex flex-col gap-2 md:col-span-2 p-2">
                                 <div class="flex items-center gap-3">
-                                    <input type="checkbox" id="chk5" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer" onchange="toggleOtherOptions(this)">
+                                    <input type="checkbox" id="chk5" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer" onchange="window.toggleOtherOptions(this)">
                                     <label for="chk5" class="font-medium text-gray-700 cursor-pointer whitespace-nowrap">5. อื่นๆ</label>
                                 </div>
                                 <div id="otherOptions" class="hidden pl-7 flex flex-col gap-2 mt-1">
@@ -318,22 +386,18 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 mb-1">ลงชื่อ (ชื่อ-นามสกุล)</label>
-                                <!-- เพิ่ม list="nameList" เพื่อผูกกับ Datalist -->
                                 <input type="text" id="inspectorName" list="nameList" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" placeholder="เช่น นายสมชาย ใจดี">
-                                <datalist id="nameList">
-                                    <!-- ตัวเลือกรายชื่อจะถูกเพิ่มอัตโนมัติด้วย JavaScript -->
-                                </datalist>
+                                <datalist id="nameList"></datalist>
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 mb-1">ตำแหน่ง</label>
-                                <!-- เปลี่ยนจาก select เป็น input ควบคู่กับ datalist -->
                                 <input type="text" id="inspectorPosition" list="positionList" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-gray-700" placeholder="เลือกหรือพิมพ์ตำแหน่งเอง...">
                                 <datalist id="positionList">
-                                    <option value="นายช่างโยธาชำนาญงาน">
-                                    <option value="นายช่างโยธาอาวุโส">
-                                    <option value="วิศวกรโยธาปฏิบัติการ">
-                                    <option value="วิศวกรโยธาชำนาญการ">
-                                    <option value="วิศวกรโยธาชำนาญการพิเศษ">
+                                    <option value="นายช่างโยธาชำนาญงาน"></option>
+                                    <option value="นายช่างโยธาอาวุโส"></option>
+                                    <option value="วิศวกรโยธาปฏิบัติการ"></option>
+                                    <option value="วิศวกรโยธาชำนาญการ"></option>
+                                    <option value="วิศวกรโยธาชำนาญการพิเศษ"></option>
                                 </datalist>
                             </div>
                             <div>
@@ -347,11 +411,11 @@
 
             <!-- Modal Footer -->
             <div class="bg-white px-6 py-4 border-t border-gray-200 flex justify-end gap-3 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
-                <button type="button" onclick="closeProposalForm()" class="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-bold transition shadow-sm">ยกเลิก</button>
-                <button type="button" onclick="exportReport()" class="px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-bold shadow-md transition flex items-center active:scale-95">
+                <button type="button" onclick="window.closeProposalForm()" class="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-bold transition shadow-sm">ยกเลิก</button>
+                <button type="button" onclick="window.exportReport()" class="px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-bold shadow-md transition flex items-center active:scale-95">
                     <i class="fa-solid fa-print mr-2"></i> ออกรายงาน
                 </button>
-                <button type="button" onclick="window.saveProposalFirebase()" class="px-6 py-2.5 bg-blue-700 text-white rounded-lg hover:bg-blue-800 font-bold shadow-md transition flex items-center active:scale-95" id="btnSaveProposal">
+                <button type="button" id="btnSaveProposal" onclick="window.saveProposalFirebase()" class="px-6 py-2.5 bg-blue-700 text-white rounded-lg hover:bg-blue-800 font-bold shadow-md transition flex items-center active:scale-95">
                     <i class="fa-solid fa-floppy-disk mr-2"></i> บันทึกข้อมูลโครงการ
                 </button>
             </div>
@@ -363,62 +427,100 @@
     <!-- ========================================== -->
     <div id="manageDataModal" class="fixed inset-0 bg-gray-900/60 z-[3000] hidden items-center justify-center p-4 md:p-6 backdrop-blur-sm transition-opacity">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
-            
-            <!-- Header -->
             <div class="bg-emerald-600 text-white px-6 py-4 flex justify-between items-center shrink-0 shadow-sm z-10">
                 <div>
                     <h3 class="font-bold text-lg flex items-center"><i class="fa-solid fa-database mr-2"></i> จัดการข้อมูลและอัปโหลดไฟล์</h3>
                     <p class="text-emerald-100 text-xs font-medium mt-0.5">ดาวน์โหลดเทมเพลต และนำเข้าข้อมูลโครงการแบบชุด (Batch)</p>
                 </div>
-                <button onclick="closeManageDataModal()" class="text-emerald-100 hover:text-white bg-emerald-700 hover:bg-emerald-800 rounded-full w-8 h-8 flex items-center justify-center transition-colors">
+                <button onclick="window.closeManageDataModal()" class="text-emerald-100 hover:text-white bg-emerald-700 hover:bg-emerald-800 rounded-full w-8 h-8 flex items-center justify-center transition-colors">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
-
-            <!-- Body -->
             <div class="p-6 overflow-y-auto bg-slate-50 flex-1 space-y-6">
-                
-                <!-- ส่วนดาวน์โหลดเทมเพลต -->
                 <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
                     <h4 class="font-bold text-slate-800 mb-2 flex items-center">
                         <i class="fa-solid fa-download text-emerald-600 mr-2"></i> 1. ดาวน์โหลดเทมเพลต
                     </h4>
                     <p class="text-sm text-gray-600 mb-4">ดาวน์โหลดไฟล์ตาราง (.csv) ที่มีหัวข้อสอดคล้องกับแบบฟอร์ม "รายละเอียดโครงการประสานแผน" เพื่อนำไปกรอกข้อมูลเตรียมอัปโหลด</p>
-                    <button onclick="downloadCSVTemplate()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold py-2 px-4 rounded-md text-sm transition-colors flex items-center">
+                    <button onclick="window.downloadCSVTemplate()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold py-2 px-4 rounded-md text-sm transition-colors flex items-center">
                         <i class="fa-solid fa-file-csv mr-2 text-emerald-600 text-lg"></i> ดาวน์โหลด Template_Project_Data.csv
                     </button>
                 </div>
-
-                <!-- ส่วนอัปโหลดข้อมูลโครงการ -->
                 <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
                     <h4 class="font-bold text-slate-800 mb-2 flex items-center">
                         <i class="fa-solid fa-upload text-blue-600 mr-2"></i> 2. อัปโหลดไฟล์ข้อมูลโครงการ
                     </h4>
                     <p class="text-sm text-gray-600 mb-4">นำไฟล์เทมเพลต .csv หรือ .xlsx ที่กรอกข้อมูลโครงการเรียบร้อยแล้ว มาอัปโหลดเข้าสู่ระบบ</p>
-                    
                     <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:bg-blue-50 transition-colors cursor-pointer" onclick="document.getElementById('fileUploadData').click()">
                         <i class="fa-solid fa-cloud-arrow-up text-4xl text-blue-400 mb-3"></i>
                         <p class="font-bold text-gray-700">คลิกที่นี่เพื่อเลือกไฟล์</p>
                         <p class="text-xs text-gray-500 mt-1">รองรับไฟล์นามสกุล .csv, .xls, .xlsx</p>
-                        <input type="file" id="fileUploadData" class="hidden" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" onchange="handleFileUpload(event)">
+                        <input type="file" id="fileUploadData" class="hidden" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" onchange="window.handleFileUpload(event)">
                     </div>
                 </div>
-
             </div>
-
-            <!-- Footer -->
             <div class="bg-white px-6 py-4 border-t border-gray-200 flex justify-end gap-3 shrink-0">
-                <button type="button" onclick="closeManageDataModal()" class="px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-bold transition">ปิดหน้าต่าง</button>
+                <button type="button" onclick="window.closeManageDataModal()" class="px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-bold transition">ปิดหน้าต่าง</button>
             </div>
         </div>
     </div>
 
 
-    <!-- ========================================== -->
-    <!-- สคริปต์ควบคุม UI และการทำงานพื้นฐาน            -->
-    <!-- ========================================== -->
+    <!-- แถบแจ้งเตือน (Toast) ขาเข้า -->
+    <div id="sysToast" class="fixed top-5 right-5 z-[9999] bg-white border-l-4 shadow-xl px-4 py-3 rounded transition-all duration-300 translate-x-[150%] opacity-0 flex items-center gap-3 min-w-[250px] pointer-events-none">
+        <i id="sysToastIcon" class="fa-solid fa-info-circle text-xl"></i>
+        <div id="sysToastMsg" class="text-sm font-bold text-gray-700"></div>
+    </div>
+
     <script>
-        // --- ฟังก์ชันแสดงการแจ้งเตือน (Toast) ---
+        // ---------------------------------------------------------
+        // 1. ระบบแผนที่ (Leaflet) และแปลงพิกัด (Proj4js)
+        // ---------------------------------------------------------
+        window.isPickingLocation = false;
+        window.tempMarker = null;
+        window.savedMarkersLayer = null; 
+        window.allProposals = []; // เก็บข้อมูลโครงการทั้งหมดจาก Firebase เพื่อใช้ค้นหา
+        window.isSearchModalOpen = false;
+        window.itemToDelete = null; // ตัวแปรสำหรับเก็บ ID ของโครงการที่จะลบ
+
+        const map = L.map('map', { zoomControl: false }).setView([16.8211, 100.2659], 10);
+        const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' });
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri' });
+        
+        streetLayer.addTo(map);
+        L.control.layers({"แผนที่ถนน": streetLayer, "แผนที่ดาวเทียม": satelliteLayer}, null, { position: 'topright' }).addTo(map);
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        window.savedMarkersLayer = L.featureGroup().addTo(map); 
+
+        let currentLatLng = null;
+        function updateCoordDisplay() {
+            if (!currentLatLng) return;
+            const system = document.getElementById('coordSystem').value;
+            const displayEl = document.getElementById('coordDisplay');
+
+            if (system === 'latlng') {
+                displayEl.innerHTML = `
+                    <div class="flex justify-between"><span class="font-bold text-gray-500">Lat:</span> <span>${currentLatLng.lat.toFixed(6)}</span></div>
+                    <div class="flex justify-between"><span class="font-bold text-gray-500">Lng:</span> <span>${currentLatLng.lng.toFixed(6)}</span></div>
+                `;
+            } else if (system === 'utm') {
+                const zone = Math.floor((currentLatLng.lng + 180) / 6) + 1;
+                const utmProj = `+proj=utm +zone=${zone} +datum=WGS84 +units=m +no_defs`;
+                const utmCoords = proj4('EPSG:4326', utmProj, [currentLatLng.lng, currentLatLng.lat]);
+                displayEl.innerHTML = `
+                    <div class="flex justify-between mb-1"><span class="font-bold text-gray-500">Zone:</span> <span class="text-blue-600 font-bold">${zone} N</span></div>
+                    <div class="flex justify-between"><span class="font-bold text-gray-500">X (E):</span> <span>${utmCoords[0].toFixed(2)} mE</span></div>
+                    <div class="flex justify-between"><span class="font-bold text-gray-500">Y (N):</span> <span>${utmCoords[1].toFixed(2)} mN</span></div>
+                `;
+            }
+        }
+
+        document.getElementById('coordSystem').addEventListener('change', updateCoordDisplay);
+
+        // ---------------------------------------------------------
+        // 2. ระบบ UI ทั่วไป
+        // ---------------------------------------------------------
         window.showToast = function(msg, type = 'success') {
             const toast = document.getElementById('sysToast');
             const icon = document.getElementById('sysToastIcon');
@@ -440,10 +542,10 @@
             setTimeout(() => {
                 toast.classList.add('translate-x-[150%]', 'opacity-0');
             }, 3500);
-        }
+        };
 
-        // --- ฟังก์ชันจัดการเมนูและ Modal ---
-        function toggleDistrictMenu() {
+        // --- ระบบเมนูย่อยและหน้าต่างค้นหา (Search System) ---
+        window.toggleDistrictMenu = function() {
             const menu = document.getElementById('districtMenu');
             const icon = document.getElementById('districtMenuIcon');
             if (menu.classList.contains('hidden')) {
@@ -455,31 +557,47 @@
                 menu.classList.remove('flex');
                 icon.classList.remove('rotate-180');
             }
-        }
+        };
 
-        function openProposalForm() {
-            document.getElementById('proposalModal').classList.remove('hidden');
-            document.getElementById('proposalModal').classList.add('flex');
-        }
-        function closeProposalForm() {
-            document.getElementById('proposalModal').classList.add('hidden');
-            document.getElementById('proposalModal').classList.remove('flex');
-        }
+        window.openSearchModal = function(districtFilter) {
+            window.toggleDistrictMenu();
+            
+            const titleEl = document.getElementById('searchModalTitle');
+            if (districtFilter) {
+                titleEl.innerHTML = `<i class="fa-solid fa-magnifying-glass-location mr-2"></i> ค้นหาข้อมูลโครงการ - อ.${districtFilter}`;
+                document.getElementById('searchInput').value = districtFilter;
+            } else {
+                titleEl.innerHTML = `<i class="fa-solid fa-magnifying-glass-location mr-2"></i> ค้นหาข้อมูลโครงการ (ทุกพื้นที่)`;
+                document.getElementById('searchInput').value = '';
+            }
 
-        function openManageDataModal() {
+            document.getElementById('searchModal').classList.remove('hidden');
+            document.getElementById('searchModal').classList.add('flex');
+            window.isSearchModalOpen = true;
+            window.renderSearchList();
+        };
+
+        window.closeSearchModal = function() {
+            document.getElementById('searchModal').classList.add('hidden');
+            document.getElementById('searchModal').classList.remove('flex');
+            window.isSearchModalOpen = false;
+        };
+
+        // --- ระบบจัดการข้อมูล ---
+        window.openManageDataModal = function() {
             document.getElementById('manageDataModal').classList.remove('hidden');
             document.getElementById('manageDataModal').classList.add('flex');
-        }
-        function closeManageDataModal() {
+        };
+
+        window.closeManageDataModal = function() {
             document.getElementById('manageDataModal').classList.add('hidden');
             document.getElementById('manageDataModal').classList.remove('flex');
-        }
+        };
 
-        function downloadCSVTemplate() {
-            const headers = "ลำดับที่,ชื่อหน่วยงานที่ขอประสาน,ชื่อโครงการเดิม,ชื่อโครงการใหม่,รายละเอียดโครงการ,ละติจูด,ลองจิจูด,งบประมาณ_2566,งบประมาณ_2567,งบประมาณ_2568,งบประมาณ_2569,งบประมาณ_2570,ผลการตรวจสอบพื้นที่_1,ผลการตรวจสอบพื้นที่_2,ผลการตรวจสอบพื้นที่_3,ผลการตรวจสอบพื้นที่_4,ผลการตรวจสอบพื้นที่_5_อื่นๆ\n";
-            const sampleData = "1,อบต.ท่านางงาม,ปรับปรุงถนนลูกรัง,-,กว้าง 8 เมตร ยาว 700 เมตร,16.821100,100.265900,-,-,-,500000,-,ถูกต้อง,ถูกต้อง,พร้อม,ถูกต้อง,รอตรวจสอบพื้นที่\n";
+        window.downloadCSVTemplate = function() {
+            const headers = "ลำดับที่,อำเภอ,ชื่อหน่วยงานที่ขอประสาน,ชื่อโครงการเดิม,ชื่อโครงการใหม่,รายละเอียดโครงการ,ละติจูด,ลองจิจูด,งบประมาณ_2566,งบประมาณ_2567,งบประมาณ_2568,งบประมาณ_2569,งบประมาณ_2570,ผลการตรวจสอบพื้นที่_1,ผลการตรวจสอบพื้นที่_2,ผลการตรวจสอบพื้นที่_3,ผลการตรวจสอบพื้นที่_4,ผลการตรวจสอบพื้นที่_5_อื่นๆ\n";
+            const sampleData = "1,เมืองพิษณุโลก,อบต.หัวรอ,ปรับปรุงถนนลูกรัง,-,กว้าง 8 เมตร ยาว 700 เมตร,16.821100,100.265900,-,-,-,500000,-,ถูกต้อง,ถูกต้อง,พร้อม,ถูกต้อง,รอตรวจสอบพื้นที่\n";
             const blob = new Blob(["\ufeff" + headers + sampleData], { type: 'text/csv;charset=utf-8;' });
-            
             const link = document.createElement("a");
             const url = URL.createObjectURL(blob);
             link.setAttribute("href", url);
@@ -488,93 +606,135 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-        }
+        };
 
-        function handleFileUpload(event) {
+        window.handleFileUpload = function(event) {
             const file = event.target.files[0];
             if(!file) return;
             window.showToast(`อัปโหลดไฟล์ "${file.name}" สำเร็จ!\n(จำลองเตรียมพล็อตลงแผนที่)`, 'success');
             event.target.value = '';
-        }
+        };
 
-        // --- ระบบแผนที่ (Leaflet) ---
-        const map = L.map('map', { zoomControl: false }).setView([16.8211, 100.2659], 10);
-        const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' });
-        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri' });
-        
-        streetLayer.addTo(map);
-        L.control.layers({"แผนที่ถนน": streetLayer, "แผนที่ดาวเทียม": satelliteLayer}, null, { position: 'topright' }).addTo(map);
-        L.control.zoom({ position: 'topright' }).addTo(map);
-
-        // --- ระบบ Street View บนแผนที่ ---
-        L.Control.StreetView = L.Control.extend({
-            onAdd: function(map) {
-                var btn = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
-                btn.innerHTML = '<i class="fa-solid fa-street-view text-lg text-[#f97316]"></i>';
-                btn.title = "เปิด Google Street View";
-                btn.onclick = function(e) {
-                    e.stopPropagation();
-                    toggleStreetViewMode();
-                };
-                return btn;
-            }
-        });
-        L.control.streetview = function(opts) { return new L.Control.StreetView(opts); }
-        L.control.streetview({ position: 'topright' }).addTo(map);
-
-        // --- ระบบแสดงพิกัด ---
-        let currentLatLng = null;
-        function updateCoordDisplay() {
-            if (!currentLatLng) return;
-            const system = document.getElementById('coordSystem').value;
-            const displayEl = document.getElementById('coordDisplay');
-
-            if (system === 'latlng') {
-                displayEl.innerHTML = `
-                    <div class="flex justify-between"><span class="font-bold text-gray-500">Lat:</span> <span>${currentLatLng.lat.toFixed(6)}</span></div>
-                    <div class="flex justify-between"><span class="font-bold text-gray-500">Lng:</span> <span>${currentLatLng.lng.toFixed(6)}</span></div>
-                `;
-            } else if (system === 'utm') {
-                const zone = Math.floor((currentLatLng.lng + 180) / 6) + 1;
-                const utmProj = `+proj=utm +zone=${zone} +datum=WGS84 +units=m +no_defs`;
-                const utmCoords = proj4('EPSG:4326', utmProj, [currentLatLng.lng, currentLatLng.lat]);
-                displayEl.innerHTML = `
-                    <div class="flex justify-between mb-0.5"><span class="font-bold text-gray-500">Zone:</span> <span class="text-blue-600 font-bold">${zone} N</span></div>
-                    <div class="flex justify-between"><span class="font-bold text-gray-500">X (E):</span> <span>${utmCoords[0].toFixed(2)} m</span></div>
-                    <div class="flex justify-between"><span class="font-bold text-gray-500">Y (N):</span> <span>${utmCoords[1].toFixed(2)} m</span></div>
-                `;
-            }
-        }
-        document.getElementById('coordSystem').addEventListener('change', updateCoordDisplay);
-
-        // --- ระบบการจิ้มพิกัด (Location Picking) & Street View ---
-        let isPickingLocation = false;
-        let isStreetViewMode = false;
-        let tempMarker = null;
-
-        function startPickingLocation() {
-            isPickingLocation = true;
-            isStreetViewMode = false;
-            document.getElementById('streetViewOverlay').classList.add('hidden');
+        window.renderSearchList = function() {
+            const tbody = document.getElementById('searchListBody');
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
             
-            closeProposalForm(); 
+            if (!window.allProposals || window.allProposals.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-gray-500">ยังไม่มีข้อมูลโครงการในระบบ</td></tr>';
+                document.getElementById('searchResultCount').innerText = `พบทั้งหมด 0 รายการ`;
+                return;
+            }
+
+            // กรองด้วย field อำเภอ (district) ด้วย
+            let filtered = window.allProposals.filter(p => {
+                const searchStr = `${p.district || ''} ${p.projectNameNew || ''} ${p.projectNameOld || ''} ${p.agencyName || ''} ${p.projectDetails || ''}`.toLowerCase();
+                return searchStr.includes(keyword);
+            });
+
+            document.getElementById('searchResultCount').innerText = `พบทั้งหมด ${filtered.length} รายการ`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-gray-500">ไม่พบข้อมูลที่ตรงกับคำค้นหา</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map((p, index) => {
+                let budget = parseFloat(p.budget?.b2569 || p.budget?.b2570 || p.budget?.b2568 || p.budget?.b2567 || p.budget?.b2566 || 0);
+                const projName = p.projectNameNew || p.projectNameOld || '-';
+                
+                return `
+                    <tr class="border-b border-gray-100 hover:bg-indigo-50 transition-colors">
+                        <td class="p-3 text-center text-gray-500 border-r border-gray-200">${index + 1}</td>
+                        <td class="p-3 text-gray-700 border-r border-gray-200">${p.district || '-'}</td>
+                        <td class="p-3 font-medium text-blue-700 border-r border-gray-200 max-w-[200px] truncate" title="${projName}">${projName}</td>
+                        <td class="p-3 text-gray-600 border-r border-gray-200">${p.agencyName || '-'}</td>
+                        <td class="p-3 text-gray-800 border-r border-gray-200 text-right">฿${budget.toLocaleString('en-US')}</td>
+                        <td class="p-3 border-r border-gray-200 text-center"><span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">${p.status || 'รอพิจารณา'}</span></td>
+                        <td class="p-3 text-center flex gap-1 justify-center">
+                            <button onclick="window.panToAndShow('${p.id}')" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-600 hover:text-white px-2 py-1.5 rounded text-[10px] font-bold transition shadow-sm flex items-center justify-center flex-1" title="ดูพิกัดบนแผนที่">
+                                <i class="fa-solid fa-map-location-dot"></i>
+                            </button>
+                            <button onclick="window.openDeleteModal('${p.id}')" class="bg-red-100 text-red-700 hover:bg-red-600 hover:text-white px-2 py-1.5 rounded text-[10px] font-bold transition shadow-sm flex items-center justify-center flex-1" title="ลบข้อมูลโครงการ">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        };
+
+        window.panToAndShow = function(id) {
+            window.closeSearchModal();
+            const proj = window.allProposals.find(p => p.id === id);
+            
+            if (proj && proj.coordinates && proj.coordinates.lat && proj.coordinates.lng) {
+                map.flyTo([proj.coordinates.lat, proj.coordinates.lng], 16, { animate: true, duration: 1.5 });
+                
+                window.savedMarkersLayer.eachLayer(layer => {
+                    if (layer.projectId === id) {
+                        setTimeout(() => { layer.openPopup(); }, 1600); 
+                    }
+                });
+            } else {
+                window.showToast('โครงการนี้ไม่ได้ระบุพิกัดที่ถูกต้องบนแผนที่ครับ', 'error');
+            }
+        };
+
+        // --- ระบบลบข้อมูล ---
+        window.openDeleteModal = function(id) {
+            window.itemToDelete = id;
+            document.getElementById('deleteConfirmModal').classList.remove('hidden');
+            document.getElementById('deleteConfirmModal').classList.add('flex');
+        };
+
+        window.closeDeleteModal = function() {
+            window.itemToDelete = null;
+            document.getElementById('deleteConfirmModal').classList.add('hidden');
+            document.getElementById('deleteConfirmModal').classList.remove('flex');
+        };
+
+        // --- ระบบฟอร์มป้อนข้อมูล ---
+        window.openProposalForm = function() {
+            document.getElementById('proposalModal').classList.remove('hidden');
+            document.getElementById('proposalModal').classList.add('flex');
+        };
+        
+        window.closeProposalForm = function() {
+            document.getElementById('proposalModal').classList.add('hidden');
+            document.getElementById('proposalModal').classList.remove('flex');
+        };
+
+        window.startPickingLocation = function() {
+            window.isPickingLocation = true;
+            window.closeProposalForm();
             document.getElementById('pickingOverlay').classList.remove('hidden');
             document.getElementById('map').style.cursor = 'crosshair';
-        }
+        };
 
-        function toggleStreetViewMode() {
-            isStreetViewMode = !isStreetViewMode;
-            isPickingLocation = false;
-            document.getElementById('pickingOverlay').classList.add('hidden');
+        window.updateMapFromInput = function() {
+            const lat = parseFloat(document.getElementById('latInput').value);
+            const lng = parseFloat(document.getElementById('lngInput').value);
+            
+            if (!isNaN(lat) && !isNaN(lng)) {
+                if (window.tempMarker) map.removeLayer(window.tempMarker);
+                const ic = L.divIcon({
+                    className: '',
+                    html: `<div style="background:#ef4444;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.5);"></div>`,
+                    iconSize: [18, 18], iconAnchor: [9, 9]
+                });
+                window.tempMarker = L.marker([lat, lng], {icon: ic}).addTo(map);
+                map.setView([lat, lng], 15);
 
-            if(isStreetViewMode) {
-                document.getElementById('map').style.cursor = 'crosshair';
-                document.getElementById('streetViewOverlay').classList.remove('hidden');
-            } else {
-                document.getElementById('map').style.cursor = '';
-                document.getElementById('streetViewOverlay').classList.add('hidden');
+                const detailInput = document.getElementById('projectDetails');
+                const coordText = `\nพิกัดภูมิศาสตร์: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                
+                if (detailInput.value.indexOf('พิกัดภูมิศาสตร์') !== -1) {
+                    detailInput.value = detailInput.value.replace(/\nพิกัดภูมิศาสตร์:.*$/, coordText);
+                } else {
+                    detailInput.value = detailInput.value.trim() + coordText;
+                }
             }
-        }
+        };
 
         map.on('mousemove', function(e) {
             currentLatLng = e.latlng;
@@ -582,67 +742,68 @@
         });
 
         map.on('click', function(e) {
-            // โหมด Street View
-            if (isStreetViewMode) {
-                const url = `https://www.google.com/maps?layer=c&cbll=${e.latlng.lat},${e.latlng.lng}`;
-                // เปิดฟอร์มกลับมา
-                openProposalForm();
-            }
-        });
+            if (window.isPickingLocation) {
+                window.isPickingLocation = false;
+                document.getElementById('map').style.cursor = '';
+                document.getElementById('pickingOverlay').classList.add('hidden');
 
-        // ฟังก์ชันอัปเดตแผนที่และข้อความเมื่อผู้ใช้พิมพ์พิกัดเองในช่อง Input
-        function updateMapFromInput() {
-            const lat = parseFloat(document.getElementById('latInput').value);
-            const lng = parseFloat(document.getElementById('lngInput').value);
-            
-            if (!isNaN(lat) && !isNaN(lng)) {
-                // ปักหมุดบนแผนที่
-                if (tempMarker) map.removeLayer(tempMarker);
+                if (window.tempMarker) map.removeLayer(window.tempMarker);
                 const ic = L.divIcon({
                     className: '',
                     html: `<div style="background:#ef4444;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.5);"></div>`,
                     iconSize: [18, 18], iconAnchor: [9, 9]
                 });
-                tempMarker = L.marker([lat, lng], {icon: ic}).addTo(map);
-                map.setView([lat, lng], 15); // เลื่อนแผนที่ไปที่พิกัดที่พิมพ์
+                window.tempMarker = L.marker([e.latlng.lat, e.latlng.lng], {icon: ic}).addTo(map);
 
-                // อัปเดตในกล่องรายละเอียดโครงการ
-                const detailInput = document.getElementById('projectDetails');
-                const coordText = `\nพิกัดภูมิศาสตร์: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                const latStr = e.latlng.lat.toFixed(6);
+                const lngStr = e.latlng.lng.toFixed(6);
                 
-                if (detailInput.value.indexOf('พิกัดภูมิศาสตร์') !== -1) {
-                    // ถ้ามีข้อความพิกัดอยู่แล้ว ให้แทนที่ของเดิม
-                    detailInput.value = detailInput.value.replace(/\nพิกัดภูมิศาสตร์:.*$/, coordText);
-                } else {
-                    // ถ้ายังไม่มี ให้ต่อท้าย
-                    detailInput.value = detailInput.value.trim() + coordText;
-                }
-            }
-        }
+                document.getElementById('latInput').value = latStr;
+                document.getElementById('lngInput').value = lngStr;
 
-        // ฟังก์ชันเปิด/ปิด ตัวเลือกของข้อ 5. อื่นๆ
-        function toggleOtherOptions(checkbox) {
+                const detailInput = document.getElementById('projectDetails');
+                const coordText = `\nพิกัดภูมิศาสตร์: ${latStr}, ${lngStr}`;
+                if (detailInput.value.indexOf('พิกัดภูมิศาสตร์') === -1) { 
+                    detailInput.value = detailInput.value.trim() + coordText;
+                } else {
+                    detailInput.value = detailInput.value.replace(/\nพิกัดภูมิศาสตร์:.*$/, coordText);
+                }
+
+                window.openProposalForm();
+            }
+        });
+
+        window.toggleOtherOptions = function(checkbox) {
             const optionsDiv = document.getElementById('otherOptions');
             if(checkbox.checked) {
                 optionsDiv.classList.remove('hidden');
             } else {
                 optionsDiv.classList.add('hidden');
             }
-        }
+        };
 
-        function formatNumber(input) {
+        window.formatNumber = function(input) {
             let val = input.value.replace(/,/g, '');
             if(isNaN(val) || val === '') {
                 input.value = '';
                 return;
             }
             input.value = parseInt(val).toLocaleString('en-US');
-        }
+        };
 
-        // --- ระบบสร้างเอกสารรายงานสำหรับปริ้นท์ ---
-        function exportReport() {
+        window.exportReport = function() {
             const seq = document.getElementById('seqNo')?.value || '-';
-            const agency = document.getElementById('agencyName')?.value || '-';
+            
+            // ดึงชื่ออำเภอและหน่วยงาน มารวมกันเพื่อแสดงในรายงานให้สวยงาม
+            const agencyRaw = document.getElementById('agencyName')?.value || '';
+            const districtRaw = document.getElementById('districtInput')?.value || '';
+            let agency = '-';
+            if(districtRaw && agencyRaw) {
+                agency = `อ.${districtRaw}<br>(<span style="font-weight:normal;">${agencyRaw}</span>)`;
+            } else if (agencyRaw) {
+                agency = agencyRaw;
+            }
+
             const projOld = document.getElementById('projectNameOld')?.value || '-';
             const projNew = document.getElementById('projectNameNew')?.value || '-';
             const details = (document.getElementById('projectDetails')?.value || '-').replace(/\n/g, '<br>');
@@ -665,7 +826,7 @@
 
             const t1 = c1Checked ? ' <b><u>ถูกต้อง</u></b>' : '';
             const t2 = c2Checked ? ' <b><u>ถูกต้อง</u></b>' : '';
-            const t3 = c3Checked ? ' <b><u>ถูกต้อง</u></b>' : '';
+            const t3 = c3Checked ? ' <b><u>พร้อม</u></b>' : '';
             const t4 = c4Checked ? ' <b><u>ถูกต้อง</u></b>' : '';
 
             const c5Checked = document.getElementById('chk5')?.checked;
@@ -683,7 +844,6 @@
                 }
             }
 
-            // ดึงข้อมูลผู้ตรวจสอบ
             const inspectorName = document.getElementById('inspectorName')?.value ? document.getElementById('inspectorName').value : '..............................................................';
             const inspectorPosition = document.getElementById('inspectorPosition')?.value ? document.getElementById('inspectorPosition').value : '..............................................................';
             
@@ -693,7 +853,7 @@
                 const d = new Date(inspectionDateRaw);
                 const day = String(d.getDate()).padStart(2, '0');
                 const month = String(d.getMonth() + 1).padStart(2, '0');
-                const year = d.getFullYear() + 543; // แปลงเป็น พ.ศ.
+                const year = d.getFullYear() + 543;
                 inspectionDateFormatted = `${day} / ${month} / ${year}`;
             }
 
@@ -718,9 +878,8 @@
                     table { width: 100%; border-collapse: collapse; margin-top: 25px; }
                     th, td { border: 1px solid #000; padding: 8px; vertical-align: top; }
                     th { background-color: #f8fafc; text-align: center; }
-                    .chk-container { margin-bottom: 5px; }
-                    
-                    /* เพิ่มสไตล์ตารางลายเซ็นให้ซ่อนขอบและจัดระเบียบ */
+                    .chk-container { margin-bottom: 5px; white-space: nowrap; }
+                    .chk-container-wrap { margin-bottom: 5px; word-break: break-word; }
                     .sig-table { width: auto; border: none; margin-left: auto; font-size: 13px; margin-top: 0; }
                     .sig-table td { border: none; padding: 6px 8px; vertical-align: bottom; }
                 </style>
@@ -734,26 +893,26 @@
                     <thead>
                         <tr>
                             <th rowspan="2" style="width: 4%;">ลำดับ<br>ที่</th>
-                            <th rowspan="2" style="width: 12%;">ชื่อหน่วยงาน<br>ที่ขอประสาน</th>
+                            <th rowspan="2" style="width: 11%;">ชื่อหน่วยงาน<br>ที่ขอประสาน</th>
                             <th colspan="2">ชื่อโครงการ</th>
-                            <th rowspan="2" style="width: 20%;">รายละเอียดโครงการ</th>
+                            <th rowspan="2" style="width: 17%;">รายละเอียดโครงการ</th>
                             <th colspan="5">งบประมาณที่เสนอขอ (บาท)</th>
-                            <th rowspan="2" style="width: 20%;">ผลการตรวจสอบพื้นที่</th>
+                            <th rowspan="2" style="width: 23%;">ผลการตรวจสอบพื้นที่</th>
                         </tr>
                         <tr>
-                            <th style="width: 14%;">(ชื่อเดิม ของ อปท.)</th>
-                            <th style="width: 14%;">(ชื่อที่ขอเปลี่ยนแปลง)</th>
-                            <th style="width: 5%;">2566</th>
-                            <th style="width: 5%;">2567</th>
-                            <th style="width: 5%;">2568</th>
-                            <th style="width: 5%;">2569</th>
-                            <th style="width: 5%;">2570</th>
+                            <th style="width: 12.5%;">(ชื่อเดิม ของ อปท.)</th>
+                            <th style="width: 12.5%;">(ชื่อที่ขอเปลี่ยนแปลง)</th>
+                            <th style="width: 4%;">2566</th>
+                            <th style="width: 4%;">2567</th>
+                            <th style="width: 4%;">2568</th>
+                            <th style="width: 4%;">2569</th>
+                            <th style="width: 4%;">2570</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td class="text-center">${seq}</td>
-                            <td>${agency.replace(/\n/g, '<br>')}</td>
+                            <td>${agency}</td>
                             <td>${projOld.replace(/\n/g, '<br>')}</td>
                             <td>${projNew.replace(/\n/g, '<br>')}</td>
                             <td>${details}</td>
@@ -762,12 +921,12 @@
                             <td class="text-right">${b68}</td>
                             <td class="text-right font-bold">${b69}</td>
                             <td class="text-right">${b70}</td>
-                            <td style="font-size: 11px; line-height: 1.4;">
-                                <div class="chk-container">${c1} 1. ขนาดพื้นที่เป็นไปตามกรอบฯ${t1}</div>
+                            <td style="font-size: 11px; line-height: 1.5;">
+                                <div class="chk-container">${c1} 1. ขนาดพื้นที่เป็นไปตามกรอบการประสานแผนฯ${t1}</div>
                                 <div class="chk-container">${c2} 2. พิกัดทางภูมิศาสตร์${t2}</div>
-                                <div class="chk-container">${c3} 3. ความพร้อมของพื้นที่ดำเนินการ${t3}</div>
+                                <div class="chk-container">${c3} 3. ความพร้อมของพื้นที่ในการดำเนินการ${t3}</div>
                                 <div class="chk-container">${c4} 4. หนังสืออนุญาตการใช้พื้นที่ฯ${t4}</div>
-                                <div class="chk-container">${c5} 5. อื่นๆ <u>${tOther}</u></div>
+                                <div class="chk-container-wrap">${c5} 5. อื่นๆ <u>${tOther}</u></div>
                             </td>
                         </tr>
                     </tbody>
@@ -804,15 +963,14 @@
             const win = window.open('', '_blank');
             win.document.write(reportHTML);
             win.document.close();
-        }
+        };
 
-        // --- ระบบจดจำชื่อและตำแหน่งผู้ตรวจสอบ (Local Storage) แบบมีประวัติ ---
+        // ระบบประวัติ LocalStorage
         document.addEventListener('DOMContentLoaded', () => {
             const nameInput = document.getElementById('inspectorName');
             const posInput = document.getElementById('inspectorPosition');
             const nameList = document.getElementById('nameList');
             
-            // 1. โหลดประวัติรายชื่อที่เคยพิมพ์ทั้งหมดมาสร้างเป็น Dropdown
             let savedNames = JSON.parse(localStorage.getItem('savedInspectorNames') || '[]');
             savedNames.forEach(name => {
                 let option = document.createElement('option');
@@ -820,7 +978,6 @@
                 nameList.appendChild(option);
             });
 
-            // 2. โหลดค่าล่าวุดที่เคยพิมพ์ไว้มาแสดง (ถ้ามี)
             if (localStorage.getItem('lastInspectorName')) {
                 nameInput.value = localStorage.getItem('lastInspectorName');
             }
@@ -828,28 +985,22 @@
                 posInput.value = localStorage.getItem('savedInspectorPosition');
             }
 
-            // 3. บันทึกรายชื่อใหม่ลงประวัติเมื่อพิมพ์เสร็จ (ใช้ 'change')
             nameInput.addEventListener('change', function() {
                 const val = this.value.trim();
-                localStorage.setItem('lastInspectorName', val); // จำชื่อล่าสุด
-                
+                localStorage.setItem('lastInspectorName', val);
                 if (val && !savedNames.includes(val)) {
                     savedNames.push(val);
-                    localStorage.setItem('savedInspectorNames', JSON.stringify(savedNames)); // อัปเดตประวัติ
-                    
-                    // เพิ่มรายชื่อใหม่เข้า Dropdown ทันที
+                    localStorage.setItem('savedInspectorNames', JSON.stringify(savedNames));
                     let option = document.createElement('option');
                     option.value = val;
                     nameList.appendChild(option);
                 }
             });
 
-            // 4. บันทึกตำแหน่ง
             posInput.addEventListener('input', function() {
                 localStorage.setItem('savedInspectorPosition', this.value);
             });
         });
-
     </script>
 
     <!-- ========================================== -->
@@ -858,21 +1009,32 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // ตั้งค่าการเชื่อมต่อ (รองรับสภาพแวดล้อมอัตโนมัติ)
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const firebaseConfig = {
+            apiKey: "AIzaSyDxFfXCG5looRXmriLgGmCSHDpo2_6voBU",
+            authDomain: "toon-civil-gis.firebaseapp.com",
+            projectId: "toon-civil-gis",
+            storageBucket: "toon-civil-gis.firebasestorage.app",
+            messagingSenderId: "795968328879",
+            appId: "1:795968328879:web:b494aec8fdab277453f05a"
+        };
+        
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const appId = "toon-civil-gis";
         let currentUser = null;
 
-        // ระบบยืนยันตัวตน
         const initAuth = async () => {
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
+                    try {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } catch (err) {
+                        console.warn("เข้าสู่ระบบด้วย Token ล้มเหลว กำลังสลับไปใช้ Anonymous Auth แทน...", err);
+                        await signInAnonymously(auth);
+                    }
                 } else {
                     await signInAnonymously(auth);
                 }
@@ -884,58 +1046,153 @@
 
         onAuthStateChanged(auth, (user) => {
             currentUser = user;
+            if(user) {
+                console.log("เชื่อมต่อ Firebase สำเร็จ! (UID:", user.uid, ")");
+
+                // ดึงข้อมูลจากคลาวด์มาสร้างเป็นหมุดถาวรบนแผนที่ และเก็บไว้ใช้ในระบบค้นหา
+                onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'proposals'), (snapshot) => {
+                    if (window.savedMarkersLayer) {
+                        window.savedMarkersLayer.clearLayers(); // ล้างหมุดเก่า
+                    }
+                    
+                    window.allProposals = []; // ล้างข้อมูลอาเรย์ค้นหา
+                    
+                    snapshot.forEach((docSnap) => {
+                        const data = docSnap.data();
+                        const projectData = { id: docSnap.id, ...data };
+                        
+                        window.allProposals.push(projectData); // เก็บข้อมูลสำหรับใช้ใน Search Modal
+                        
+                        // ตรวจสอบว่าพิกัดถูกต้องเพื่อปักหมุด
+                        if (data.coordinates && data.coordinates.lat && data.coordinates.lng) {
+                            
+                            const savedIcon = L.divIcon({
+                                className: 'custom-div-icon',
+                                html: `<div style="background-color: #10b981; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 2px 2px 5px rgba(0,0,0,0.4);">
+                                        <i class="fa-solid fa-flag text-white text-[12px]" style="transform: rotate(45deg);"></i>
+                                       </div>`,
+                                iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -26]
+                            });
+
+                            const showBudget = data.budget.b2569 || data.budget.b2570 || data.budget.b2568 || data.budget.b2567 || data.budget.b2566 || '0';
+
+                            const popupContent = `
+                                <div class="font-sans min-w-[220px] rounded-md overflow-hidden shadow-sm">
+                                    <div class="bg-emerald-600 text-white p-2 text-center">
+                                        <h4 class="font-bold text-sm m-0">${data.projectNameNew || data.projectNameOld || 'ไม่มีชื่อโครงการ'}</h4>
+                                    </div>
+                                    <div class="p-3 text-xs space-y-1.5 bg-white">
+                                        <div><span class="text-gray-500">หน่วยงาน:</span> <b>${data.agencyName} (${data.district || 'ไม่ระบุ'})</b></div>
+                                        <div><span class="text-gray-500">งบประมาณ:</span> <b class="text-emerald-600">${Number(showBudget).toLocaleString('en-US')} บาท</b></div>
+                                        <div class="pt-2 mt-2 border-t border-gray-100 text-center">
+                                            <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-[10px] font-bold">สถานะ: ${data.status}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+
+                            const marker = L.marker([data.coordinates.lat, data.coordinates.lng], {icon: savedIcon})
+                             .bindPopup(popupContent)
+                             .addTo(window.savedMarkersLayer);
+                            
+                            // เก็บ ID ไว้ใน marker เพื่อง่ายต่อการคลิกจากหน้าค้นหา
+                            marker.projectId = docSnap.id;
+                        }
+                    });
+
+                    // อัปเดตตารางค้นหาทันทีหากหน้าต่างกำลังเปิดอยู่
+                    if (window.isSearchModalOpen) {
+                        window.renderSearchList();
+                    }
+                    
+                }, (error) => {
+                    console.error("Error fetching proposals: ", error);
+                });
+            }
         });
 
-        // ฟังก์ชันบันทึกข้อมูลหลัก
+        // ฟังก์ชันลบข้อมูลจาก Firebase
+        window.confirmDeleteFromCloud = async function() {
+            if (!window.itemToDelete || !currentUser) return;
+            
+            const btn = document.getElementById('confirmDeleteBtn');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังลบ...';
+            btn.disabled = true;
+
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'proposals', window.itemToDelete));
+                window.showToast("ลบข้อมูลโครงการเรียบร้อยแล้ว", "success");
+                window.closeDeleteModal();
+            } catch (err) {
+                console.error("Error deleting document: ", err);
+                window.showToast("เกิดข้อผิดพลาดในการลบข้อมูล", "error");
+            } finally {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
+        };
+
+        // ฟังก์ชันบันทึกข้อมูลหลักลง Firebase
         window.saveProposalFirebase = async function() {
             if (!currentUser) {
                 window.showToast("ระบบกำลังเชื่อมต่อฐานข้อมูล กรุณารอสักครู่", "error");
                 return;
             }
 
-            const agencyName = document.getElementById('agencyName').value;
+            const district = document.getElementById('districtInput')?.value;
+            if (!district) {
+                window.showToast("กรุณาเลือกอำเภอด้วยครับ", "error");
+                return;
+            }
+
+            const agencyName = document.getElementById('agencyName')?.value;
             if (!agencyName) {
                 window.showToast("กรุณาระบุชื่อหน่วยงานที่ขอประสาน", "error");
                 return;
             }
 
             const btn = document.getElementById('btnSaveProposal');
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังบันทึก...';
-            btn.disabled = true;
+            let originalHTML = "";
+            if(btn) {
+                originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังบันทึก...';
+                btn.disabled = true;
+            }
 
             try {
                 const docId = 'PROPOSAL_' + Date.now();
                 
                 const data = {
-                    seqNo: document.getElementById('seqNo').value || '',
+                    seqNo: document.getElementById('seqNo')?.value || '',
+                    district: district, // เพิ่มข้อมูลอำเภอ
                     agencyName: agencyName,
-                    projectNameOld: document.getElementById('projectNameOld').value || '',
-                    projectNameNew: document.getElementById('projectNameNew').value || '',
-                    projectDetails: document.getElementById('projectDetails').value || '',
+                    projectNameOld: document.getElementById('projectNameOld')?.value || '',
+                    projectNameNew: document.getElementById('projectNameNew')?.value || '',
+                    projectDetails: document.getElementById('projectDetails')?.value || '',
                     coordinates: {
-                        lat: parseFloat(document.getElementById('latInput').value) || null,
-                        lng: parseFloat(document.getElementById('lngInput').value) || null
+                        lat: parseFloat(document.getElementById('latInput')?.value) || null,
+                        lng: parseFloat(document.getElementById('lngInput')?.value) || null
                     },
                     budget: {
-                        b2566: document.getElementById('budget66').value || '',
-                        b2567: document.getElementById('budget67').value || '',
-                        b2568: document.getElementById('budget68').value || '',
-                        b2569: document.getElementById('budget69').value || '',
-                        b2570: document.getElementById('budget70').value || ''
+                        b2566: document.getElementById('budget66')?.value || '',
+                        b2567: document.getElementById('budget67')?.value || '',
+                        b2568: document.getElementById('budget68')?.value || '',
+                        b2569: document.getElementById('budget69')?.value || '',
+                        b2570: document.getElementById('budget70')?.value || ''
                     },
                     checklist: {
-                        c1: document.getElementById('chk1').checked,
-                        c2: document.getElementById('chk2').checked,
-                        c3: document.getElementById('chk3').checked,
-                        c4: document.getElementById('chk4').checked,
-                        c5: document.getElementById('chk5').checked,
+                        c1: document.getElementById('chk1')?.checked || false,
+                        c2: document.getElementById('chk2')?.checked || false,
+                        c3: document.getElementById('chk3')?.checked || false,
+                        c4: document.getElementById('chk4')?.checked || false,
+                        c5: document.getElementById('chk5')?.checked || false,
                         otherInfo: ''
                     },
                     inspectorInfo: {
-                        name: document.getElementById('inspectorName').value || '',
-                        position: document.getElementById('inspectorPosition').value || '',
-                        date: document.getElementById('inspectionDate').value || ''
+                        name: document.getElementById('inspectorName')?.value || '',
+                        position: document.getElementById('inspectorPosition')?.value || '',
+                        date: document.getElementById('inspectionDate')?.value || ''
                     },
                     status: 'รอพิจารณา',
                     createdAt: new Date().toISOString(),
@@ -945,30 +1202,32 @@
                 if (data.checklist.c5) {
                     const rdo = document.querySelector('input[name="otherOption"]:checked');
                     if (rdo) {
-                        data.checklist.otherInfo = (rdo.value === 'ระบุเอง') ? document.getElementById('txtOther').value : rdo.value;
+                        data.checklist.otherInfo = (rdo.value === 'ระบุเอง') ? (document.getElementById('txtOther')?.value || '') : rdo.value;
                     }
                 }
 
-                // บันทึกลง Firestore
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'proposals', docId);
                 await setDoc(docRef, data);
 
                 window.showToast("บันทึกข้อมูลโครงการลงฐานข้อมูลสำเร็จ!", "success");
                 
-                document.getElementById('dataForm').reset();
-                document.getElementById('otherOptions').classList.add('hidden');
+                document.getElementById('dataForm')?.reset();
+                document.getElementById('otherOptions')?.classList.add('hidden');
                 
-                if (typeof tempMarker !== 'undefined' && tempMarker) {
-                    map.removeLayer(tempMarker);
+                if (window.tempMarker) {
+                    map.removeLayer(window.tempMarker);
                 }
-                closeProposalForm();
+                
+                if(typeof window.closeProposalForm === 'function') window.closeProposalForm();
 
             } catch (err) {
                 console.error(err);
                 window.showToast("บันทึกข้อมูลล้มเหลว: " + err.message, "error");
             } finally {
-                btn.innerHTML = originalHTML;
-                btn.disabled = false;
+                if(btn) {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                }
             }
         };
     </script>
