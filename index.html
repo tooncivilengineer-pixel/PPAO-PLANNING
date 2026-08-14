@@ -121,9 +121,8 @@
                         <thead class="bg-gray-100 text-gray-700 sticky top-0 border-b border-gray-200 z-10">
                             <tr>
                                 <th class="p-3 font-bold text-center w-12">ลำดับ</th>
-                                <th class="p-3 font-bold w-24">อำเภอ</th>
+                                <th class="p-3 font-bold w-48">อำเภอ / หน่วยงานที่ขอ</th>
                                 <th class="p-3 font-bold">ชื่อโครงการ</th>
-                                <th class="p-3 font-bold">หน่วยงานที่ขอ</th>
                                 <th class="p-3 font-bold text-right">งบรวม</th>
                                 <th class="p-3 font-bold text-center">สถานะ</th>
                                 <th class="p-3 font-bold text-center w-36">จัดการ / ลบ</th>
@@ -140,7 +139,6 @@
         </div>
     </div>
 
-    <!-- Agency Specific Projects Management Modal -->
     <div id="agencyProjectModal" class="fixed inset-0 bg-gray-900/60 z-[3500] hidden items-center justify-center p-4 md:p-6 backdrop-blur-sm transition-opacity">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden">
             <div class="bg-amber-600 text-white px-6 py-4 flex justify-between items-center shrink-0 shadow-sm z-10">
@@ -178,7 +176,6 @@
                 <button onclick="App.ui.closeModal('analyzeModal')" class="text-fuchsia-200 hover:text-white bg-fuchsia-800 hover:bg-fuchsia-900 rounded-full w-8 h-8 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="p-6 bg-slate-50 flex flex-col flex-1 overflow-hidden">
-                <!-- ส่วนที่เพิ่มใหม่: ตัวกรองตามอำเภอ -->
                 <div class="mb-4 flex flex-col md:flex-row items-start md:items-center justify-between bg-white p-3 rounded-lg border border-gray-200 shadow-sm shrink-0 gap-3">
                     <div class="flex items-center gap-3 w-full md:w-auto">
                         <label class="font-bold text-gray-700 text-sm whitespace-nowrap"><i class="fa-solid fa-filter text-fuchsia-600 mr-1"></i> กรองตามอำเภอ:</label>
@@ -194,7 +191,7 @@
                         <thead class="bg-gray-100 text-gray-700 sticky top-0 border-b border-gray-200 z-10">
                             <tr>
                                 <th class="p-3 font-bold text-center w-12">ลำดับ</th>
-                                <th class="p-3 font-bold w-24">อำเภอ</th>
+                                <th class="p-3 font-bold w-48">อำเภอ / หน่วยงานที่ขอ</th>
                                 <th class="p-3 font-bold">ข้อมูลโครงการ</th>
                                 <th class="p-3 font-bold text-center">ผลการตรวจสอบพื้นที่ 4 ข้อ</th>
                                 <th class="p-3 font-bold text-center bg-fuchsia-50 w-48">วิเคราะห์ความเหมาะสม</th>
@@ -301,16 +298,23 @@
                                         <button type="button" onclick="document.getElementById('kmlFileInput').click()" class="whitespace-nowrap bg-emerald-600 text-white font-bold px-4 py-2 rounded-md hover:bg-emerald-700 text-sm shadow-sm"><i class="fa-solid fa-file-import"></i> KML</button>
                                         <input type="file" id="kmlFileInput" accept=".kml" class="hidden" onchange="App.features.handleKMLUpload(event)">
                                     </div>
-                                    <div class="flex items-center gap-3 bg-white px-3 py-2 rounded-md border shadow-sm w-full md:w-auto shrink-0">
-                                        <div class="flex gap-2">
-                                            <select id="lineStyle" class="border rounded text-xs p-1 outline-none"><option value="solid" selected>เส้นทึบ</option><option value="dashed">เส้นประ</option></select>
-                                            <input type="color" id="lineColor" value="#3b82f6" class="w-6 h-6 border-none cursor-pointer">
-                                            <select id="lineWeight" class="border rounded text-xs p-1 outline-none"><option value="3">บาง</option><option value="5" selected>กลาง</option><option value="8">หนา</option></select>
+                                    <div class="flex flex-col gap-2 w-full md:w-auto shrink-0">
+                                        <div class="flex items-center gap-3 bg-white px-3 py-2 rounded-md border shadow-sm w-full md:w-auto">
+                                            <div class="flex gap-2">
+                                                <select id="lineStyle" class="border rounded text-xs p-1 outline-none"><option value="solid" selected>เส้นทึบ</option><option value="dashed">เส้นประ</option></select>
+                                                <input type="color" id="lineColor" value="#3b82f6" class="w-6 h-6 border-none cursor-pointer">
+                                                <select id="lineWeight" class="border rounded text-xs p-1 outline-none"><option value="3">บาง</option><option value="5" selected>กลาง</option><option value="8">หนา</option></select>
+                                            </div>
+                                            <div id="distanceDisplay" class="hidden items-center gap-1 border-l pl-3">
+                                                <i class="fa-solid fa-ruler text-sky-600"></i><span class="text-[10px] font-bold text-gray-600">ระยะทางบนแผนที่:</span>
+                                                <input type="text" id="calculatedDistance" readonly class="w-16 bg-transparent text-sky-700 font-bold text-xs text-right outline-none" value="-">
+                                                <span class="text-[10px] font-bold text-gray-600">ม.</span>
+                                            </div>
                                         </div>
-                                        <div id="distanceDisplay" class="hidden items-center gap-1 border-l pl-3">
-                                            <i class="fa-solid fa-ruler text-sky-600"></i><span class="text-[10px] font-bold text-gray-600">ระยะทาง:</span>
-                                            <input type="text" id="calculatedDistance" readonly class="w-16 bg-transparent text-sky-700 font-bold text-xs text-right outline-none" value="-">
-                                            <span class="text-[10px] font-bold text-gray-600">ม.</span>
+                                        <!-- แจ้งเตือนระยะทางคลาดเคลื่อนแบบ Real-time -->
+                                        <div id="routeSyncWarning" class="hidden bg-red-100 border border-red-300 text-red-700 text-[11px] p-2 rounded flex items-start gap-2 shadow-sm font-medium">
+                                            <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+                                            <div>แจ้งเตือน: จุดที่ปักหมุดอยู่ห่างจากเส้นทางเกิน 150 เมตร (เส้นพรีวิวแสดงเป็นสีแดง) โปรดตรวจสอบความถูกต้อง</div>
                                         </div>
                                     </div>
                                 </div>
@@ -377,26 +381,26 @@
             </div>
 
             <!-- Footer Buttons -->
-            <div class="bg-white px-6 py-4 border-t border-gray-200 flex justify-between items-center shrink-0 z-10">
+            <div class="bg-white px-6 py-4 border-t border-gray-200 flex justify-between items-center shrink-0 z-10 flex-wrap gap-3">
                 <div class="flex gap-2">
-                    <button type="button" onclick="App.features.clearForm()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-bold transition text-sm">เริ่มใหม่</button>
-                    <button type="button" onclick="App.ui.closeModal('proposalModal')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-bold transition text-sm">ซ่อนหน้าต่าง</button>
+                    <button type="button" onclick="App.features.clearForm()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-bold transition text-sm whitespace-nowrap">เริ่มใหม่</button>
+                    <button type="button" onclick="App.ui.closeModal('proposalModal')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-bold transition text-sm whitespace-nowrap">ซ่อนหน้าต่าง</button>
                 </div>
-                <div class="flex flex-wrap gap-2">
-                    <button type="button" onclick="App.features.openAgencyProjectList()" class="px-4 py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-bold shadow-md transition flex items-center text-sm" title="ตรวจสอบและลบรายการของหน่วยงานนี้">
-                        <i class="fa-solid fa-list-check mr-2"></i> ตรวจสอบ/ลบรายหน่วยงาน
+                <div class="flex flex-wrap gap-2 justify-end">
+                    <button type="button" onclick="App.features.openAgencyProjectList()" class="px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-bold shadow-md transition flex items-center text-sm whitespace-nowrap" title="ตรวจสอบและลบรายการของหน่วยงานนี้">
+                        <i class="fa-solid fa-list-check mr-1.5"></i> ตรวจสอบ/ลบ
                     </button>
-                    <button type="button" onclick="App.features.prepareNextProject()" class="px-4 py-2.5 bg-sky-600 text-white rounded-lg hover:bg-sky-700 font-bold shadow-md transition flex items-center text-sm" title="สร้างลำดับถัดไปของหน่วยงานนี้">
-                        <i class="fa-solid fa-folder-plus mr-2"></i> เพิ่มลำดับถัดไป
+                    <button type="button" onclick="App.features.prepareNextProject()" class="px-3 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 font-bold shadow-md transition flex items-center text-sm whitespace-nowrap" title="สร้างลำดับถัดไปของหน่วยงานนี้">
+                        <i class="fa-solid fa-plus mr-1.5"></i> เพิ่มลำดับถัดไป
                     </button>
-                    <button type="button" onclick="App.features.printReport()" class="px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-bold shadow-md transition flex items-center text-sm">
-                        <i class="fa-solid fa-print mr-2"></i> ออกรายงาน
+                    <button type="button" onclick="App.features.printReport()" class="px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-bold shadow-md transition flex items-center text-sm whitespace-nowrap">
+                        <i class="fa-solid fa-print mr-1.5"></i> ออกรายงาน
                     </button>
-                    <button type="button" id="btnSaveAndNext" onclick="App.db.saveProposal(true)" class="px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold shadow-md transition flex items-center text-sm">
-                        <i class="fa-solid fa-plus mr-2"></i> บันทึก & เพิ่มต่อ
+                    <button type="button" id="btnSaveAndNext" onclick="App.db.saveProposal(true)" class="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold shadow-md transition flex items-center text-sm whitespace-nowrap">
+                        <i class="fa-solid fa-forward-step mr-1.5"></i> บันทึก & เพิ่มต่อ
                     </button>
-                    <button type="button" id="btnSaveProposal" onclick="App.db.saveProposal(false)" class="px-4 py-2.5 bg-blue-700 text-white rounded-lg hover:bg-blue-800 font-bold shadow-md transition flex items-center text-sm">
-                        <i class="fa-solid fa-floppy-disk mr-2"></i> บันทึกแล้วปิด
+                    <button type="button" id="btnSaveProposal" onclick="App.db.saveProposal(false)" class="px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 font-bold shadow-md transition flex items-center text-sm whitespace-nowrap">
+                        <i class="fa-solid fa-floppy-disk mr-1.5"></i> บันทึกแล้วปิด
                     </button>
                 </div>
             </div>
@@ -516,16 +520,16 @@
                     const filtered = App.state.proposals.filter(p => `${p.district||''} ${p.projectNameNew||''} ${p.projectNameOld||''} ${p.agencyName||''}`.toLowerCase().includes(kw));
                     document.getElementById('searchResultCount').innerText = `พบ ${filtered.length} รายการ`;
                     if (!filtered.length) return tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-gray-500">ไม่พบข้อมูล</td></tr>';
+                    
                     tbody.innerHTML = filtered.map((p, i) => {
                         let totalB = ['b2566','b2567','b2568','b2569','b2570'].reduce((sum, yr) => sum + parseFloat(p.budget?.[yr]?.replace(/,/g,'')||0), 0);
                         let sc = p.status === 'เหมาะสม' ? 'bg-emerald-100 text-emerald-800' : (p.status === 'ไม่เหมาะสม' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800');
                         const isSyncOk = App.features.checkGeometrySync(p); const warn = !isSyncOk ? `<i class="fa-solid fa-triangle-exclamation text-red-500 ml-2" title="พิกัดคลาดเคลื่อน"></i>` : '';
                         const nameDisplay = p.projectNameNew || p.projectNameOld || '(ไม่มีชื่อโครงการ)';
                         return `<tr class="border-b hover:bg-indigo-50">
-                            <td class="p-3 text-center">${p.seqNo || (i + 1)}</td>
-                            <td class="p-3">${p.district||'-'}</td>
+                            <td class="p-3 text-center font-bold text-gray-600">${i + 1}</td>
+                            <td class="p-3">อ.${p.district||'-'} <span class="text-gray-500 font-medium">(${p.agencyName||'-'})</span> <span class="text-xs text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">(ลำดับที่ ${p.seqNo||'-'})</span></td>
                             <td class="p-3 font-medium max-w-[200px] truncate text-blue-700" title="${nameDisplay}">${nameDisplay}${warn}</td>
-                            <td class="p-3">${p.agencyName||'-'}</td>
                             <td class="p-3 text-right font-bold">฿${totalB.toLocaleString()}</td>
                             <td class="p-3 text-center"><span class="${sc} px-2 py-1 rounded text-xs font-bold">${p.status||'รอพิจารณา'}</span></td>
                             <td class="p-3 text-center whitespace-nowrap">
@@ -583,7 +587,14 @@
                         }
                         const isSyncOk = App.features.checkGeometrySync(p);
                         const alertBox = !isSyncOk ? `<div class="mt-2 bg-red-50 border border-red-200 text-red-600 p-2 rounded text-xs font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> แจ้งเตือน: พิกัดคลาดเคลื่อน <button onclick="App.features.panTo('${p.id}')" class="ml-2 underline hover:text-red-800">ดูในแผนที่</button></div>` : '';
-                        return `<tr class="border-b hover:bg-fuchsia-50"><td class="p-3 text-center">${p.seqNo || (i+1)}</td><td class="p-3">${p.district||'-'}</td><td class="p-3 max-w-[250px]"><div class="font-bold text-gray-800 truncate" title="${n}">${n}</div><div class="text-xs text-gray-500">${p.agencyName||'-'}</div></td><td class="p-3 text-xs leading-5"><div>${c1}</div><div>${c2}</div><div>${c3}</div><div>${c4}</div>${c5}${alertBox}</td><td class="p-3 text-center"><select onchange="App.db.updateStatus('${p.id}', this.value)" class="w-full border rounded px-2 py-1.5 text-xs font-bold outline-none"><option value="รอพิจารณา" ${p.status==='รอพิจารณา'?'selected':''}>รอพิจารณา</option><option value="เหมาะสม" ${p.status==='เหมาะสม'?'selected':''}>เหมาะสม</option><option value="ไม่เหมาะสม" ${p.status==='ไม่เหมาะสม'?'selected':''}>ไม่เหมาะสม</option></select></td></tr>`;
+                        
+                        return `<tr class="border-b hover:bg-fuchsia-50">
+                            <td class="p-3 text-center font-bold text-gray-600">${i+1}</td>
+                            <td class="p-3">อ.${p.district||'-'} <span class="text-gray-500 font-medium">(${p.agencyName||'-'})</span> <span class="text-xs text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">(ลำดับที่ ${p.seqNo||'-'})</span></td>
+                            <td class="p-3 max-w-[250px]"><div class="font-bold text-gray-800 truncate" title="${n}">${n}</div></td>
+                            <td class="p-3 text-xs leading-5"><div>${c1}</div><div>${c2}</div><div>${c3}</div><div>${c4}</div>${c5}${alertBox}</td>
+                            <td class="p-3 text-center"><select onchange="App.db.updateStatus('${p.id}', this.value)" class="w-full border rounded px-2 py-1.5 text-xs font-bold outline-none"><option value="รอพิจารณา" ${p.status==='รอพิจารณา'?'selected':''}>รอพิจารณา</option><option value="เหมาะสม" ${p.status==='เหมาะสม'?'selected':''}>เหมาะสม</option><option value="ไม่เหมาะสม" ${p.status==='ไม่เหมาะสม'?'selected':''}>ไม่เหมาะสม</option></select></td>
+                        </tr>`;
                     }).join('');
                 }
             },
@@ -618,11 +629,24 @@
                         if (pGeo) {
                             const layer = L.geoJSON(pGeo, { style: { color: cLine, weight: p.lineWeight || 5, dashArray: p.lineStyle==='dashed'?'10,10':null, opacity: 0.8 } });
                             const d = App.features.calculateLength(pGeo);
-                            let t = `<div class="text-xs font-sans p-1"><div class="font-bold ${isSyncOk?'text-blue-800':'text-red-700'} text-sm mb-0.5">${p.projectNameNew || p.projectNameOld || 'ไม่มีชื่อ'} (ลำดับที่ ${p.seqNo||1})</div><div class="text-gray-700">อ.${p.district||'-'} | ${p.agencyName||'-'}</div>`;
-                            if(d>0) t += `<div class="text-sky-700 font-bold mt-1"><i class="fa-solid fa-ruler mr-1"></i>ระยะทาง: ${d.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} ม.</div>`;
-                            if(!isSyncOk) t += `<div class="text-red-600 font-bold mt-1 bg-red-50 p-1 rounded border border-red-200"><i class="fa-solid fa-triangle-exclamation mr-1"></i>พิกัดคลาดเคลื่อน</div>`;
-                            t += `<div class="text-indigo-600 font-bold mt-1">คลิกเพื่อดูรายละเอียด</div></div>`;
-                            layer.bindTooltip(t, { direction: 'auto', sticky: true, className: 'bg-white px-3 py-2 rounded shadow-md border border-gray-200' });
+                            
+                            let t = `
+                            <div class="font-sans w-56 md:w-64 whitespace-normal break-words">
+                                <div class="font-bold ${isSyncOk?'text-blue-800':'text-red-700'} text-[13px] leading-snug mb-1.5 border-b border-gray-200 pb-1.5">
+                                    ${p.projectNameNew || p.projectNameOld || 'ไม่มีชื่อโครงการ'}
+                                </div>
+                                <div class="flex justify-between items-start text-[11px] text-gray-600 mb-2 gap-2">
+                                    <div class="leading-tight"><i class="fa-solid fa-building mr-1 text-gray-400"></i>${p.agencyName||'-'}<br><span class="text-gray-400 text-[10px] ml-3">(อ.${p.district||'-'})</span></div>
+                                    <div class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-bold whitespace-nowrap border border-slate-200 shadow-sm shrink-0">ลำดับ ${p.seqNo||1}</div>
+                                </div>`;
+                            
+                            if(d>0) t += `<div class="text-sky-700 font-bold text-[11px] bg-sky-50/80 px-2 py-1 rounded border border-sky-100 mb-1.5 flex items-center"><i class="fa-solid fa-ruler mr-1.5 text-sky-500"></i>ระยะทางบนแผนที่: ${d.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} ม.</div>`;
+                            if(!isSyncOk) t += `<div class="text-red-600 font-bold text-[11px] bg-red-50 px-2 py-1 rounded border border-red-200 mb-1.5 flex items-center"><i class="fa-solid fa-triangle-exclamation mr-1.5"></i>พิกัดคลาดเคลื่อน</div>`;
+                            
+                            t += `<div class="text-indigo-600 text-[11px] font-bold mt-1 pt-1 border-t border-dashed border-gray-200 text-center"><i class="fa-solid fa-hand-pointer mr-1"></i>คลิกเพื่อดูรายละเอียด</div>
+                            </div>`;
+                            
+                            layer.bindTooltip(t, { direction: 'auto', sticky: true, className: 'bg-white px-3 py-2.5 rounded-lg shadow-lg border border-gray-200' });
                             layer.on('click', () => App.features.openProposalDetail(p.id));
                             layer.addTo(App.state.kmlLayer);
                         }
@@ -632,16 +656,38 @@
                             
                             if(p.coordinates.startLat && p.coordinates.startLng) {
                                 const mStart = L.marker([p.coordinates.startLat, p.coordinates.startLng], {icon: mkIcon('#3b82f6'), interactive: true});
-                                let tStart = `<div class="text-xs font-sans p-1"><div class="font-bold text-blue-800 text-sm mb-0.5">${p.projectNameNew || p.projectNameOld || 'ไม่มีชื่อ'} (ลำดับที่ ${p.seqNo||1}) - จุดเริ่มต้น</div><div class="text-gray-700">อ.${p.district||'-'} | ${p.agencyName||'-'}</div><div class="text-indigo-600 font-bold mt-1">คลิกเพื่อดูรายละเอียด</div></div>`;
-                                mStart.bindTooltip(tStart, { direction: 'auto', sticky: true, className: 'bg-white px-3 py-2 rounded shadow-md border border-gray-200' });
+                                let tStart = `
+                                <div class="font-sans w-56 md:w-64 whitespace-normal break-words">
+                                    <div class="font-bold text-blue-800 text-[13px] leading-snug mb-1.5 border-b border-gray-200 pb-1.5">
+                                        ${p.projectNameNew || p.projectNameOld || 'ไม่มีชื่อโครงการ'}
+                                    </div>
+                                    <div class="flex justify-between items-center mb-2">
+                                        <div class="text-[11px] text-gray-600"><i class="fa-solid fa-building mr-1"></i>${p.agencyName||'-'}</div>
+                                        <div class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-bold border border-slate-200">ลำดับ ${p.seqNo||1}</div>
+                                    </div>
+                                    <div class="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold border border-blue-200"><i class="fa-solid fa-location-dot mr-1"></i> จุดเริ่มต้นโครงการ</div>
+                                    <div class="text-indigo-600 text-[11px] font-bold mt-2 pt-1 border-t border-dashed border-gray-200 text-center"><i class="fa-solid fa-hand-pointer mr-1"></i>คลิกเพื่อดูรายละเอียด</div>
+                                </div>`;
+                                mStart.bindTooltip(tStart, { direction: 'auto', sticky: true, className: 'bg-white px-3 py-2.5 rounded-lg shadow-lg border-l-4 border-l-blue-500' });
                                 mStart.on('click', () => App.features.openProposalDetail(p.id));
                                 mStart.addTo(App.state.kmlLayer);
                             }
                             
                             if(p.coordinates.endLat && p.coordinates.endLng) {
                                 const mEnd = L.marker([p.coordinates.endLat, p.coordinates.endLng], {icon: mkIcon('#ef4444'), interactive: true});
-                                let tEnd = `<div class="text-xs font-sans p-1"><div class="font-bold text-red-700 text-sm mb-0.5">${p.projectNameNew || p.projectNameOld || 'ไม่มีชื่อ'} (ลำดับที่ ${p.seqNo||1}) - จุดสิ้นสุด</div><div class="text-gray-700">อ.${p.district||'-'} | ${p.agencyName||'-'}</div><div class="text-indigo-600 font-bold mt-1">คลิกเพื่อดูรายละเอียด</div></div>`;
-                                mEnd.bindTooltip(tEnd, { direction: 'auto', sticky: true, className: 'bg-white px-3 py-2 rounded shadow-md border border-gray-200' });
+                                let tEnd = `
+                                <div class="font-sans w-56 md:w-64 whitespace-normal break-words">
+                                    <div class="font-bold text-red-700 text-[13px] leading-snug mb-1.5 border-b border-gray-200 pb-1.5">
+                                        ${p.projectNameNew || p.projectNameOld || 'ไม่มีชื่อโครงการ'}
+                                    </div>
+                                    <div class="flex justify-between items-center mb-2">
+                                        <div class="text-[11px] text-gray-600"><i class="fa-solid fa-building mr-1"></i>${p.agencyName||'-'}</div>
+                                        <div class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-bold border border-slate-200">ลำดับ ${p.seqNo||1}</div>
+                                    </div>
+                                    <div class="inline-block bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-200"><i class="fa-solid fa-flag-checkered mr-1"></i> จุดสิ้นสุดโครงการ</div>
+                                    <div class="text-indigo-600 text-[11px] font-bold mt-2 pt-1 border-t border-dashed border-gray-200 text-center"><i class="fa-solid fa-hand-pointer mr-1"></i>คลิกเพื่อดูรายละเอียด</div>
+                                </div>`;
+                                mEnd.bindTooltip(tEnd, { direction: 'auto', sticky: true, className: 'bg-white px-3 py-2.5 rounded-lg shadow-lg border-l-4 border-l-red-500' });
                                 mEnd.on('click', () => App.features.openProposalDetail(p.id));
                                 mEnd.addTo(App.state.kmlLayer);
                             }
@@ -651,6 +697,18 @@
             },
 
             features: {
+                extractDistanceFromString(text) {
+                    if (!text) return null;
+                    const regex = /(?:ยาว|ระยะทาง|ความยาว)\s*([\d,.]+)\s*(เมตร|ม\.|ม|กิโลเมตร|กม\.|กม)/i;
+                    const match = text.match(regex);
+                    if (match) {
+                        let val = parseFloat(match[1].replace(/,/g, ''));
+                        const unit = match[2].toLowerCase();
+                        if (unit.includes('กม') || unit.includes('กิโลเมตร')) val *= 1000;
+                        return val;
+                    }
+                    return null;
+                },
                 checkGeometrySync(p) {
                     if (!p.geoJSON || !p.coordinates || (!p.coordinates.startLat && !p.coordinates.endLat)) return true;
                     let pts = []; const ext = (g) => { if(g.type==='LineString') pts.push(...g.coordinates); else if(g.type==='MultiLineString') g.coordinates.forEach(c => pts.push(...c)); };
@@ -663,15 +721,48 @@
                         return mx <= 150;
                     } catch(e) { return true; }
                 },
+                checkCurrentFormSync() {
+                    const warnDiv = document.getElementById('routeSyncWarning'); if(!warnDiv) return;
+                    const sLat = parseFloat(document.getElementById('startLatInput').value); const sLng = parseFloat(document.getElementById('startLngInput').value);
+                    const eLat = parseFloat(document.getElementById('endLatInput').value); const eLng = parseFloat(document.getElementById('endLngInput').value);
+                    const geo = App.state.currentGeoJSON;
+                    
+                    if (!geo || (isNaN(sLat) && isNaN(eLat))) { warnDiv.classList.add('hidden'); return; }
+                    
+                    const p = { geoJSON: geo, coordinates: { startLat: sLat, startLng: sLng, endLat: eLat, endLng: eLng } };
+                    const isOk = this.checkGeometrySync(p);
+                    
+                    if (!isOk) {
+                        warnDiv.classList.remove('hidden');
+                        if (App.state.previewLayer) App.state.previewLayer.eachLayer(l => { if (l.setStyle) l.setStyle({ color: '#ef4444' }); });
+                    } else {
+                        warnDiv.classList.add('hidden');
+                        if (App.state.previewLayer) {
+                            const c = document.getElementById('lineColor').value || '#3b82f6';
+                            App.state.previewLayer.eachLayer(l => { if (l.setStyle) l.setStyle({ color: c }); });
+                        }
+                    }
+                },
                 calculateLength(g) {
                     if(!g||!App.state.map)return 0; let t=0; const cL=(c)=>{let d=0;for(let i=0;i<c.length-1;i++)d+=App.state.map.distance(L.latLng(c[i][1],c[i][0]),L.latLng(c[i+1][1],c[i+1][0]));return d;};
                     try{ const p=typeof g==='string'?JSON.parse(g):g; const pG=(gm)=>{if(gm.type==='LineString')t+=cL(gm.coordinates);else if(gm.type==='MultiLineString')gm.coordinates.forEach(l=>t+=cL(l));};
                     if(p.type==='FeatureCollection')p.features.forEach(f=>{if(f.geometry)pG(f.geometry);});else if(p.type==='Feature'){if(g.geometry)pG(g.geometry);}else pG(p); }catch(e){} return t;
                 },
                 updateDistanceDisplay(g) {
-                    const dd = document.getElementById('distanceDisplay'); const di = document.getElementById('calculatedDistance'); if(!dd||!di)return;
-                    if(!g){ di.value='-'; dd.classList.add('hidden'); dd.classList.remove('flex'); return; }
-                    const d = this.calculateLength(g); if(d>0){ di.value=d.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); dd.classList.remove('hidden'); dd.classList.add('flex'); } else { di.value='-'; dd.classList.add('hidden'); dd.classList.remove('flex'); }
+                    const dd = document.getElementById('distanceDisplay'); const di = document.getElementById('calculatedDistance'); 
+                    if(!dd||!di)return;
+                    if(!g){ 
+                        di.value='-'; dd.classList.add('hidden'); dd.classList.remove('flex'); 
+                    } else {
+                        const d = this.calculateLength(g); 
+                        if(d>0){ 
+                            di.value=d.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); 
+                            dd.classList.remove('hidden'); dd.classList.add('flex'); 
+                        } else { 
+                            di.value='-'; dd.classList.add('hidden'); dd.classList.remove('flex'); 
+                        }
+                    }
+                    this.checkCurrentFormSync();
                 },
                 autoSetSeqNo() {
                     if (App.state.editingId) return; 
@@ -719,13 +810,16 @@
                     App.state.editingId = null; document.getElementById('dataForm').reset(); App.state.currentGeoJSON = null; this.updateDistanceDisplay(null);
                     App.state.currentRoutes = []; App.state.currentRouteIndex = 0; 
                     App.state.attachments = []; App.state.existingAttachments = []; this.renderAttachments();
+                    
                     const btnAlt = document.getElementById('btnAltRoute'); if(btnAlt) btnAlt.classList.add('hidden');
-                    document.getElementById('btnSaveProposal').innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> บันทึกแล้วปิด';
-                    const btnNext = document.getElementById('btnSaveAndNext'); if(btnNext) { btnNext.classList.remove('hidden'); btnNext.innerHTML = '<i class="fa-solid fa-plus mr-2"></i> บันทึก & เพิ่มต่อ'; }
+                    document.getElementById('btnSaveProposal').innerHTML = '<i class="fa-solid fa-floppy-disk mr-1.5"></i> บันทึกแล้วปิด';
+                    const btnNext = document.getElementById('btnSaveAndNext'); if(btnNext) { btnNext.classList.remove('hidden'); btnNext.innerHTML = '<i class="fa-solid fa-forward-step mr-1.5"></i> บันทึก & เพิ่มต่อ'; }
                     
                     if(App.state.tempMarkers.start) App.state.map.removeLayer(App.state.tempMarkers.start); if(App.state.tempMarkers.end) App.state.map.removeLayer(App.state.tempMarkers.end);
                     App.state.tempMarkers = { start: null, end: null }; if(App.state.previewLayer) App.state.previewLayer.clearLayers();
                     const c5 = document.getElementById('chk5'); if(c5) { c5.checked = false; App.ui.toggleOtherOptions(c5); }
+                    
+                    const warnDiv = document.getElementById('routeSyncWarning'); if(warnDiv) warnDiv.classList.add('hidden');
                     
                     if(keepAgency) {
                         document.getElementById('districtInput').value = cDist;
@@ -762,6 +856,7 @@
                     const modalScroll = document.querySelector('#proposalModal .overflow-y-auto');
                     if(modalScroll) modalScroll.scrollTop = 0;
                 },
+                
                 confirmDelete(id) {
                     const p = App.state.proposals.find(x => x.id === id);
                     if(!p) return;
@@ -775,27 +870,17 @@
                     if(!id) return;
                     App.ui.closeModal('deleteConfirmModal');
                     try {
-                        if(db) {
-                            await deleteDoc(doc(db, 'artifacts', canvasAppId, 'public', 'data', 'proposals', id));
-                        }
+                        if(db) { await deleteDoc(doc(db, 'artifacts', canvasAppId, 'public', 'data', 'proposals', id)); }
                         App.state.proposals = App.state.proposals.filter(p => p.id !== id);
-                        App.db.saveToLocal();
-                        App.map.drawMarkers();
-                        App.ui.renderSearchTable();
-                        App.ui.renderAnalyzeTable();
-                        const dist = document.getElementById('districtInput').value;
-                        const agc = document.getElementById('agencyName').value;
+                        App.db.saveToLocal(); App.map.drawMarkers(); App.ui.renderSearchTable(); App.ui.renderAnalyzeTable();
+                        const dist = document.getElementById('districtInput').value; const agc = document.getElementById('agencyName').value;
                         if(dist && agc) App.ui.renderAgencyProjectTable(dist, agc);
                         App.ui.showToast("ลบโครงการเรียบร้อยแล้ว", "success");
                     } catch(e) {
                         console.error("Delete Error:", e);
                         App.state.proposals = App.state.proposals.filter(p => p.id !== id);
-                        App.db.saveToLocal();
-                        App.map.drawMarkers();
-                        App.ui.renderSearchTable();
-                        App.ui.renderAnalyzeTable();
-                        const dist = document.getElementById('districtInput').value;
-                        const agc = document.getElementById('agencyName').value;
+                        App.db.saveToLocal(); App.map.drawMarkers(); App.ui.renderSearchTable(); App.ui.renderAnalyzeTable();
+                        const dist = document.getElementById('districtInput').value; const agc = document.getElementById('agencyName').value;
                         if(dist && agc) App.ui.renderAgencyProjectTable(dist, agc);
                         App.ui.showToast("ลบโครงการออกจากระบบแล้ว", "success");
                     }
@@ -829,11 +914,11 @@
                 cancelPicking() { App.state.isPicking = false; const type = App.state.pickingType; App.state.pickingType = null; document.getElementById('pickingOverlay').className = 'hidden'; document.getElementById('map').style.cursor = ''; if (type !== 'streetview') App.ui.openModal('proposalModal'); },
                 finishPicking(lat, lng) {
                     const type = App.state.pickingType; this.cancelPicking();
-                    if (type === 'start') { document.getElementById('startLatInput').value = lat.toFixed(6); document.getElementById('startLngInput').value = lng.toFixed(6); App.map.setTempMarker(lat, lng, type); App.ui.openModal('proposalModal'); }
-                    else if (type === 'end') { document.getElementById('endLatInput').value = lat.toFixed(6); document.getElementById('endLngInput').value = lng.toFixed(6); App.map.setTempMarker(lat, lng, type); App.ui.openModal('proposalModal'); }
+                    if (type === 'start') { document.getElementById('startLatInput').value = lat.toFixed(6); document.getElementById('startLngInput').value = lng.toFixed(6); App.map.setTempMarker(lat, lng, type); App.ui.openModal('proposalModal'); this.checkCurrentFormSync(); }
+                    else if (type === 'end') { document.getElementById('endLatInput').value = lat.toFixed(6); document.getElementById('endLngInput').value = lng.toFixed(6); App.map.setTempMarker(lat, lng, type); App.ui.openModal('proposalModal'); this.checkCurrentFormSync(); }
                     else if (type === 'streetview') { window.open(`http://maps.google.com/maps?q=&layer=c&cbll=${lat},${lng}`, '_blank'); App.ui.showToast('กำลังเปิด Google Street View...', 'success'); }
                 },
-                updateMapFromInput() { const sLa=parseFloat(document.getElementById('startLatInput').value); const sLn=parseFloat(document.getElementById('startLngInput').value); const eLa=parseFloat(document.getElementById('endLatInput').value); const eLn=parseFloat(document.getElementById('endLngInput').value); if(!isNaN(sLa)&&!isNaN(sLn))App.map.setTempMarker(sLa,sLn,'start'); if(!isNaN(eLa)&&!isNaN(eLn))App.map.setTempMarker(eLa,eLn,'end'); },
+                updateMapFromInput() { const sLa=parseFloat(document.getElementById('startLatInput').value); const sLn=parseFloat(document.getElementById('startLngInput').value); const eLa=parseFloat(document.getElementById('endLatInput').value); const eLn=parseFloat(document.getElementById('endLngInput').value); if(!isNaN(sLa)&&!isNaN(sLn))App.map.setTempMarker(sLa,sLn,'start'); if(!isNaN(eLa)&&!isNaN(eLn))App.map.setTempMarker(eLa,eLn,'end'); this.checkCurrentFormSync(); },
                 async snapToRoad() {
                     const sl=document.getElementById('startLatInput').value, sL=document.getElementById('startLngInput').value, el=document.getElementById('endLatInput').value, eL=document.getElementById('endLngInput').value;
                     if(!sl||!sL||!el||!eL) return App.ui.showToast('ระบุจุดเริ่มต้นและสิ้นสุดให้ครบ', 'error'); App.ui.showToast('กำลังคำนวณเส้นทาง...', 'info');
@@ -862,7 +947,7 @@
                     const f = evt.target.files[0]; if(!f) return; const r = new FileReader();
                     r.onload = function(e) { try {
                         const g = toGeoJSON.kml(new DOMParser().parseFromString(e.target.result, 'text/xml')); App.state.currentGeoJSON = g;
-                        if(App.state.previewLayer) App.state.previewLayer.clearLayers(); const l = L.geoJSON(g, { style: { color: '#ef4444', weight: 5 } }).addTo(App.state.previewLayer);
+                        if(App.state.previewLayer) App.state.previewLayer.clearLayers(); const l = L.geoJSON(g, { style: { color: '#3b82f6', weight: 5 } }).addTo(App.state.previewLayer);
                         if(l.getBounds().isValid()){ App.state.map.fitBounds(l.getBounds()); const c = l.getBounds().getCenter(); document.getElementById('startLatInput').value=c.lat.toFixed(6); document.getElementById('startLngInput').value=c.lng.toFixed(6); App.map.setTempMarker(c.lat, c.lng, 'start'); }
                         App.features.updateDistanceDisplay(g); App.ui.showToast('นำเข้า KML สำเร็จ', 'success');
                     } catch(err) { App.ui.showToast('ไฟล์ KML ไม่ถูกต้อง', 'error'); } }; r.readAsText(f); evt.target.value = '';
@@ -874,11 +959,26 @@
                     if(foundLayer && foundLayer.getBounds && foundLayer.getBounds().isValid()) App.state.map.fitBounds(foundLayer.getBounds(), { padding: [50, 50] });
                     else if(p.coordinates?.startLat && !isNaN(p.coordinates.startLat)) App.state.map.flyTo([p.coordinates.startLat, p.coordinates.startLng], 15);
                 },
+                
                 openProposalDetail(id) {
                     const p = App.state.proposals.find(x => x.id === id); if(!p) return;
                     const isSyncOk = App.features.checkGeometrySync(p); const warn = !isSyncOk ? `<div class="bg-red-50 text-red-600 p-3 rounded-lg border border-red-200 mb-4 text-sm font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>พิกัดจุดไม่สอดคล้องกับเส้นทาง (ห่างเกิน 150ม.)</div>` : '';
                     let pGeo=null; if(p.geoJSON) try{ pGeo=typeof p.geoJSON==='string'?JSON.parse(p.geoJSON):p.geoJSON;}catch(e){}
                     const d = pGeo ? App.features.calculateLength(pGeo) : 0;
+                    
+                    const docDist = App.features.extractDistanceFromString(p.projectDetails);
+                    let distCompareHtml = '';
+                    if (docDist !== null && d > 0) {
+                        const diff = Math.abs(docDist - d);
+                        const pct = (diff / docDist) * 100;
+                        if (pct <= 15) {
+                            distCompareHtml = `<div class="bg-emerald-50 text-emerald-700 p-3 rounded-lg border border-emerald-200 mt-3 text-sm flex gap-3 items-start"><i class="fa-solid fa-circle-check mt-0.5 text-lg"></i><div><strong class="block">ระยะทางสอดคล้องกัน</strong>ตรวจพบความยาวในรายละเอียด: <b>${docDist.toLocaleString()} ม.</b><br>วัดจากแผนที่ได้: <b>${d.toLocaleString('en-US',{maximumFractionDigits:2})} ม.</b><br><span class="text-xs opacity-80">(คลาดเคลื่อน ${pct.toFixed(1)}% - อยู่ในเกณฑ์ที่ยอมรับได้)</span></div></div>`;
+                        } else {
+                            distCompareHtml = `<div class="bg-orange-50 text-orange-700 p-3 rounded-lg border border-orange-200 mt-3 text-sm flex gap-3 items-start"><i class="fa-solid fa-triangle-exclamation mt-0.5 text-lg"></i><div><strong class="block text-red-700">ระยะทางคลาดเคลื่อนเกิน 15%</strong>ตรวจพบความยาวในรายละเอียด: <b>${docDist.toLocaleString()} ม.</b><br>วัดจากแผนที่ได้: <b class="text-red-700">${d.toLocaleString('en-US',{maximumFractionDigits:2})} ม.</b><br><span class="text-xs opacity-80 font-bold">(คลาดเคลื่อน ${pct.toFixed(1)}% - โปรดตรวจสอบแนวเส้นทางหรือข้อมูลในเอกสาร)</span></div></div>`;
+                        }
+                    } else if (docDist !== null && d === 0) {
+                         distCompareHtml = `<div class="bg-amber-50 text-amber-700 p-3 rounded-lg border border-amber-200 mt-3 text-sm flex gap-3 items-start"><i class="fa-solid fa-circle-info mt-0.5 text-lg"></i><div><strong class="block">พบระยะทางในเอกสาร แต่ไม่มีเส้นบนแผนที่</strong>ตรวจพบความยาว: <b>${docDist.toLocaleString()} ม.</b> โปรดวาดเส้นทางเพื่อตรวจสอบความถูกต้อง</div></div>`;
+                    }
                     
                     let attHtml = '';
                     if(p.attachments && p.attachments.length > 0) {
@@ -890,7 +990,7 @@
                         attHtml += '</div></div>';
                     }
 
-                    document.getElementById('detailContent').innerHTML = `${warn}<div class="grid grid-cols-2 gap-3 text-sm"><div class="col-span-2 border-b pb-2 mb-2 flex justify-between items-center"><span class="font-bold">สถานะ:</span> <span class="bg-amber-100 px-2 py-1 rounded font-bold">${p.status||'รอพิจารณา'}</span> <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-bold">ลำดับที่ ${p.seqNo||1}</span></div><div><span class="text-gray-500 block text-xs">อำเภอ</span><div class="font-bold">${p.district||'-'}</div></div><div><span class="text-gray-500 block text-xs">หน่วยงานที่ขอ</span><div class="font-bold">${p.agencyName||'-'}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">ชื่อโครงการ (ขอเปลี่ยนแปลง)</span><div class="font-medium">${p.projectNameNew||p.projectNameOld||'-'}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">รายละเอียดโครงการ</span><div>${p.projectDetails||'-'}</div></div><div class="col-span-2 bg-sky-50 p-3 rounded flex justify-between mt-2"><span class="font-bold text-sky-800 text-xs"><i class="fa-solid fa-ruler mr-2"></i>ระยะทางเส้นทาง:</span><span class="font-bold text-sky-700">${d>0?d.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' เมตร':'-'}</span></div>${attHtml}</div>`;
+                    document.getElementById('detailContent').innerHTML = `${warn}<div class="grid grid-cols-2 gap-3 text-sm"><div class="col-span-2 border-b pb-2 mb-2 flex justify-between items-center"><span class="font-bold">สถานะ:</span> <span class="bg-amber-100 px-2 py-1 rounded font-bold">${p.status||'รอพิจารณา'}</span> <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-bold">ลำดับที่ ${p.seqNo||1}</span></div><div><span class="text-gray-500 block text-xs">อำเภอ</span><div class="font-bold">${p.district||'-'}</div></div><div><span class="text-gray-500 block text-xs">หน่วยงานที่ขอ</span><div class="font-bold">${p.agencyName||'-'}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">ชื่อโครงการ (ขอเปลี่ยนแปลง)</span><div class="font-medium">${p.projectNameNew||p.projectNameOld||'-'}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">รายละเอียดโครงการ</span><div>${p.projectDetails||'-'}</div>${distCompareHtml}</div><div class="col-span-2 bg-sky-50 p-3 rounded flex justify-between mt-2"><span class="font-bold text-sky-800 text-xs"><i class="fa-solid fa-ruler mr-2"></i>ระยะทางบนแผนที่:</span><span class="font-bold text-sky-700">${d>0?d.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' เมตร':'-'}</span></div>${attHtml}</div>`;
                     document.getElementById('btnEditProposal').onclick = () => { App.ui.closeModal('detailModal'); App.features.editProject(id); }; App.ui.openModal('detailModal');
                 },
                 editProject(id) {
@@ -903,10 +1003,11 @@
                     document.getElementById('inspectorName').value = p.inspectorName || ''; document.getElementById('inspectorPosition').value = p.inspectorPosition || ''; document.getElementById('inspectionDate').value = p.inspectionDate || '';
                     App.state.existingAttachments = p.attachments || []; this.renderAttachments();
                     try{ App.state.currentGeoJSON = p.geoJSON ? (typeof p.geoJSON==='string'?JSON.parse(p.geoJSON):p.geoJSON) : null; this.updateDistanceDisplay(App.state.currentGeoJSON); }catch(e){}
-                    document.getElementById('btnSaveProposal').innerHTML = '<i class="fa-solid fa-pen-to-square mr-2"></i> บันทึกการแก้ไข'; 
-                    const btnNext = document.getElementById('btnSaveAndNext'); if(btnNext) btnNext.classList.remove('hidden');
+                    document.getElementById('btnSaveProposal').innerHTML = '<i class="fa-solid fa-pen-to-square mr-1.5"></i> บันทึกการแก้ไข'; 
+                    const btnNext = document.getElementById('btnSaveAndNext'); if(btnNext) btnNext.classList.add('hidden'); // Hide Save&Next when editing
                     App.ui.openModal('proposalModal');
                 },
+                
                 printReport() {
                     const currentDistrict = document.getElementById('districtInput').value;
                     const currentAgency = document.getElementById('agencyName').value;
@@ -936,7 +1037,7 @@
                     let projectImageSections = '';
 
                     agencyProposals.forEach((p, index) => {
-                        const displaySeq = index + 1;
+                        const displaySeq = index + 1; // บังคับรันเลข 1, 2, 3 ใหม่บนกระดาษเสมอ
                         let oTxtHtml = '';
                         if (p.checklist?.chk5 && p.checklist.otherText) {
                             oTxtHtml = `<br><span style="margin-left: 12px; font-size: 10px; color: #444;">- ${p.checklist.otherText}</span>`;
@@ -1030,9 +1131,7 @@
                     try {
                         const lightWeightProposals = App.state.proposals.map(p => {
                             let pCopy = { ...p };
-                            if (pCopy.attachments) {
-                                pCopy.attachments = pCopy.attachments.map(a => (a.url && a.url.length > 1000) ? { ...a, url: null } : a);
-                            }
+                            if (pCopy.attachments) { pCopy.attachments = pCopy.attachments.map(a => (a.url && a.url.length > 1000) ? { ...a, url: null } : a); }
                             return pCopy;
                         });
                         localStorage.setItem('localProposals', JSON.stringify(lightWeightProposals));
@@ -1044,8 +1143,7 @@
                     if(!db) return this.loadLocal();
                     onSnapshot(collection(db, 'artifacts', canvasAppId, 'public', 'data', 'proposals'), (snapshot) => {
                         App.state.proposals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        App.db.saveToLocal();
-                        App.map.drawMarkers();
+                        App.db.saveToLocal(); App.map.drawMarkers();
                     }, (e) => { console.error(e); this.loadLocal(); });
                 },
                 loadLocal() { try { const data = localStorage.getItem('localProposals'); if(data) { App.state.proposals = JSON.parse(data); App.map.drawMarkers(); } } catch(e){} },
@@ -1059,11 +1157,9 @@
                     const btnNext = document.getElementById('btnSaveAndNext');
                     
                     if (isContinuous && btnNext) {
-                        btnNext.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังบันทึก...'; 
-                        btnNext.disabled = true;
+                        btnNext.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังบันทึก...'; btnNext.disabled = true;
                     } else {
-                        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังบันทึก...'; 
-                        btn.disabled = true;
+                        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังบันทึก...'; btn.disabled = true;
                     }
                     
                     try {
@@ -1071,9 +1167,7 @@
                         localStorage.setItem('inspectorPosition', document.getElementById('inspectorPosition').value);
 
                         const id = isContinuous ? ('P_' + Date.now()) : (App.state.editingId || 'P_' + Date.now());
-                        if (isContinuous) {
-                            App.state.editingId = null;
-                        }
+                        if (isContinuous) { App.state.editingId = null; }
 
                         let finalAttachments = [...App.state.existingAttachments];
                         
@@ -1126,16 +1220,13 @@
                                     }
                                     finalAttachments.push({ name: file.name, url: uploadedUrl || b64Data, type: file.type });
                                 } catch(err) {
-                                    console.error(err);
-                                    App.ui.showToast(`ข้ามไฟล์ ${file.name}`, "error");
+                                    console.error(err); App.ui.showToast(`ข้ามไฟล์ ${file.name}`, "error");
                                 }
                             }
                         }
 
                         const sanitizedAttachments = finalAttachments.map(att => ({
-                            name: att?.name || 'unnamed_file',
-                            url: att?.url || '',
-                            type: att?.type || ''
+                            name: att?.name || 'unnamed_file', url: att?.url || '', type: att?.type || ''
                         }));
 
                         let cSt = 'รอพิจารณา'; if(App.state.editingId){ const ex=App.state.proposals.find(p=>p.id===App.state.editingId); if(ex&&ex.status) cSt=ex.status; }
@@ -1154,10 +1245,8 @@
                             projectNameOld:document.getElementById('projectNameOld').value, projectNameNew:document.getElementById('projectNameNew').value, 
                             projectDetails:document.getElementById('projectDetails').value, 
                             coordinates:{
-                                startLat: parseCoord(document.getElementById('startLatInput').value), 
-                                startLng: parseCoord(document.getElementById('startLngInput').value), 
-                                endLat: parseCoord(document.getElementById('endLatInput').value), 
-                                endLng: parseCoord(document.getElementById('endLngInput').value)
+                                startLat: parseCoord(document.getElementById('startLatInput').value), startLng: parseCoord(document.getElementById('startLngInput').value), 
+                                endLat: parseCoord(document.getElementById('endLatInput').value), endLng: parseCoord(document.getElementById('endLngInput').value)
                             }, 
                             lineStyle:document.getElementById('lineStyle').value, lineColor:document.getElementById('lineColor').value, lineWeight:parseInt(document.getElementById('lineWeight').value)||5, 
                             geoJSON:App.state.currentGeoJSON?JSON.stringify(App.state.currentGeoJSON):null, 
@@ -1202,12 +1291,12 @@
                         App.ui.showToast(`บันทึกไม่สำเร็จ: ${e.message}`, "error"); 
                     } finally { 
                         if (App.state.editingId) {
-                            btn.innerHTML = '<i class="fa-solid fa-pen-to-square mr-2"></i> บันทึกการแก้ไข';
+                            btn.innerHTML = '<i class="fa-solid fa-pen-to-square mr-1.5"></i> บันทึกการแก้ไข';
                         } else {
-                            btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> บันทึกแล้วปิด'; 
+                            btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1.5"></i> บันทึกแล้วปิด'; 
                         }
                         btn.disabled = false; 
-                        if(btnNext) { btnNext.innerHTML = '<i class="fa-solid fa-plus mr-2"></i> บันทึก & เพิ่มต่อ'; btnNext.disabled = false; }
+                        if(btnNext) { btnNext.innerHTML = '<i class="fa-solid fa-forward-step mr-1.5"></i> บันทึก & เพิ่มต่อ'; btnNext.disabled = false; }
                     }
                 },
                 
