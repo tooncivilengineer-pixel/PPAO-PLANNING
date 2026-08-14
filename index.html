@@ -178,6 +178,17 @@
                 <button onclick="App.ui.closeModal('analyzeModal')" class="text-fuchsia-200 hover:text-white bg-fuchsia-800 hover:bg-fuchsia-900 rounded-full w-8 h-8 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="p-6 bg-slate-50 flex flex-col flex-1 overflow-hidden">
+                <!-- ส่วนที่เพิ่มใหม่: ตัวกรองตามอำเภอ -->
+                <div class="mb-4 flex flex-col md:flex-row items-start md:items-center justify-between bg-white p-3 rounded-lg border border-gray-200 shadow-sm shrink-0 gap-3">
+                    <div class="flex items-center gap-3 w-full md:w-auto">
+                        <label class="font-bold text-gray-700 text-sm whitespace-nowrap"><i class="fa-solid fa-filter text-fuchsia-600 mr-1"></i> กรองตามอำเภอ:</label>
+                        <select id="analyzeDistrictFilter" onchange="App.ui.renderAnalyzeTable()" class="w-full md:w-auto border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:ring-2 focus:ring-fuchsia-500 outline-none min-w-[200px]">
+                            <option value="">-- ดูทั้งหมดทุกอำเภอ --</option>
+                        </select>
+                    </div>
+                    <span class="text-sm font-bold text-fuchsia-700 bg-fuchsia-100 px-4 py-1.5 rounded-full shadow-inner" id="analyzeResultCount">รวม 0 โครงการ</span>
+                </div>
+                
                 <div class="flex-1 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-sm custom-scroll">
                     <table class="w-full text-left text-sm whitespace-nowrap">
                         <thead class="bg-gray-100 text-gray-700 sticky top-0 border-b border-gray-200 z-10">
@@ -462,8 +473,10 @@
             ui: {
                 init() {
                     const dSelect = document.getElementById('districtInput'); const dMenu = document.getElementById('districtListContainer');
+                    const aSelect = document.getElementById('analyzeDistrictFilter');
                     Object.keys(ORG_DATA).forEach(d => {
                         if(dSelect) dSelect.innerHTML += `<option value="${d}">${d}</option>`;
+                        if(aSelect) aSelect.innerHTML += `<option value="${d}">${d}</option>`;
                         if(dMenu) dMenu.innerHTML += `<button onclick="App.features.search('${d}')" class="bg-white hover:bg-blue-50 text-gray-600 border border-gray-200 py-2 px-3 rounded text-xs text-left w-full mt-1"><i class="fa-solid fa-caret-right mr-2"></i> ${d}</button>`;
                     });
                     document.getElementById('coordSystem').addEventListener('change', App.ui.updateCoordDisplay);
@@ -550,8 +563,14 @@
                 },
                 renderAnalyzeTable() {
                     const tbody = document.getElementById('analyzeListBody');
-                    if (!App.state.proposals.length) return tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-500">ไม่มีข้อมูล</td></tr>';
-                    tbody.innerHTML = App.state.proposals.map((p, i) => {
+                    const filterDist = document.getElementById('analyzeDistrictFilter')?.value || '';
+                    const filteredProposals = App.state.proposals.filter(p => filterDist === '' || p.district === filterDist);
+                    
+                    const countEl = document.getElementById('analyzeResultCount');
+                    if(countEl) countEl.innerText = `รวม ${filteredProposals.length} โครงการ`;
+
+                    if (!filteredProposals.length) return tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-500">ไม่มีข้อมูล</td></tr>';
+                    tbody.innerHTML = filteredProposals.map((p, i) => {
                         const n = p.projectNameNew || p.projectNameOld || '-';
                         const chk = p.checklist || {};
                         const c1 = chk.chk1 ? `<span class="text-emerald-600"><i class="fa-solid fa-check"></i> 1. ขนาดพื้นที่เป็นไปตามกรอบฯ</span>` : `<span class="text-red-500"><i class="fa-solid fa-xmark"></i> 1. ขนาดพื้นที่เป็นไปตามกรอบฯ</span>`;
