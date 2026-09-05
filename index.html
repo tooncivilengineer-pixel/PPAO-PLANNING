@@ -13,6 +13,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/togeojson/0.16.0/togeojson.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
 
     <!-- Font Awesome & Tailwind CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -69,6 +70,16 @@
 
             <button onclick="App.features.openAnalyze()" class="pointer-events-auto bg-white/95 backdrop-blur-sm shadow-md border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-lg text-sm flex items-center justify-start transition-all active:scale-95">
                 <i class="fa-solid fa-chart-area w-6 text-center mr-3 text-lg text-fuchsia-600"></i> วิเคราะห์โครงการ
+            </button>
+
+            <button onclick="App.roadMeasure.open()" class="pointer-events-auto bg-white/95 shadow-md border border-blue-200 hover:bg-blue-50 text-blue-800 font-bold py-3 px-4 rounded-lg text-sm text-left"><i class="fa-solid fa-ruler mr-2"></i> หาแนวถนนตามระยะทาง</button>
+            <button onclick="App.spatial.open()" class="pointer-events-auto bg-white/95 backdrop-blur-sm shadow-md border border-teal-200 hover:bg-teal-50 text-teal-800 font-bold py-3 px-4 rounded-lg text-sm flex items-center justify-start transition-all active:scale-95">
+                <i class="fa-solid fa-layer-group w-6 text-center mr-3 text-lg text-teal-600"></i> วิเคราะห์ความเหมาะสมเชิงพื้นที่
+            </button>
+
+            <button onclick="App.features.openOrdinanceFolder()" class="pointer-events-auto bg-white/95 backdrop-blur-sm shadow-md border border-indigo-200 hover:bg-indigo-50 text-indigo-800 font-bold py-3 px-4 rounded-lg text-sm flex items-center justify-start transition-all active:scale-95">
+                <i class="fa-solid fa-folder-tree w-6 text-center mr-3 text-lg text-indigo-600"></i> แฟ้มโครงการข้อบัญญัติ
+                <span id="ordinanceFolderCount" class="ml-auto bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded-full border border-indigo-200">0</span>
             </button>
 
             <button onclick="App.features.openDashboard()" class="pointer-events-auto bg-white/95 backdrop-blur-sm shadow-md border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-lg text-sm flex items-center justify-start transition-all active:scale-95">
@@ -195,6 +206,7 @@
                                 <th class="p-3 font-bold">ข้อมูลโครงการ</th>
                                 <th class="p-3 font-bold text-center">ผลการตรวจสอบพื้นที่ 4 ข้อ</th>
                                 <th class="p-3 font-bold text-center bg-fuchsia-50 w-48">วิเคราะห์ความเหมาะสม</th>
+                                <th class="p-3 font-bold text-center bg-indigo-50 w-64">ขั้นตอนดำเนินงาน</th>
                             </tr>
                         </thead>
                         <tbody id="analyzeListBody"></tbody>
@@ -423,6 +435,130 @@
         </div>
     </div>
 
+    <!-- Spatial Suitability Analysis -->
+    <div id="spatialAnalysisModal" class="fixed inset-0 bg-gray-900/60 z-[3300] hidden items-center justify-center p-3 md:p-5 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-[1500px] h-[92vh] flex flex-col overflow-hidden">
+            <div class="bg-teal-700 text-white px-5 py-4 flex justify-between items-center shrink-0">
+                <div>
+                    <h3 class="font-bold text-lg flex items-center"><i class="fa-solid fa-layer-group mr-2"></i> วิเคราะห์ความเหมาะสมเชิงพื้นที่</h3>
+                    <p class="text-teal-100 text-xs mt-1">วิเคราะห์โครงการถนนจากชั้นข้อมูล GIS พร้อมคะแนน ความเชื่อมั่น และเหตุผลที่ตรวจสอบย้อนกลับได้</p>
+                </div>
+                <button onclick="App.ui.closeModal('spatialAnalysisModal')" class="text-teal-100 hover:text-white bg-teal-800 hover:bg-teal-900 rounded-full w-8 h-8"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto bg-slate-50 p-4 custom-scroll">
+                <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+                    <aside class="xl:col-span-4 space-y-4">
+                        <section class="bg-white border rounded-xl shadow-sm p-4">
+                            <div class="flex items-center justify-between mb-3"><h4 class="font-bold text-teal-800"><i class="fa-solid fa-map mr-2"></i>ชั้นข้อมูลกายภาพ</h4><button onclick="App.spatial.clearLayers()" class="text-xs text-red-600 hover:bg-red-50 px-2 py-1 rounded">ล้างชั้นข้อมูล</button></div>
+                            <p class="text-[11px] text-gray-500 mb-3">รองรับ GeoJSON และ KML ระบบจะไม่ให้คะแนนปัจจัยที่ยังไม่มีข้อมูล</p>
+                            <div class="space-y-2">
+                                <label class="block border rounded-lg p-2.5 hover:bg-teal-50 cursor-pointer"><div class="flex justify-between text-xs"><span class="font-bold"><i class="fa-solid fa-mountain-sun text-amber-600 w-5"></i> ความลาดชัน</span><span id="spatialStatusSlope" class="text-gray-400">ยังไม่มีข้อมูล</span></div><input type="file" accept=".geojson,.json,.kml" class="hidden" onchange="App.spatial.importLayer('slope',this)"></label>
+                                <label class="block border rounded-lg p-2.5 hover:bg-teal-50 cursor-pointer"><div class="flex justify-between text-xs"><span class="font-bold"><i class="fa-solid fa-water text-sky-600 w-5"></i> น้ำท่วมซ้ำซาก</span><span id="spatialStatusFlood" class="text-gray-400">ยังไม่มีข้อมูล</span></div><input type="file" accept=".geojson,.json,.kml" class="hidden" onchange="App.spatial.importLayer('flood',this)"></label>
+                                <label class="block border rounded-lg p-2.5 hover:bg-teal-50 cursor-pointer"><div class="flex justify-between text-xs"><span class="font-bold"><i class="fa-solid fa-house-user text-violet-600 w-5"></i> ชุมชน/ประชากร</span><span id="spatialStatusCommunity" class="text-gray-400">ยังไม่มีข้อมูล</span></div><input type="file" accept=".geojson,.json,.kml" class="hidden" onchange="App.spatial.importLayer('community',this)"></label>
+                                <label class="block border rounded-lg p-2.5 hover:bg-teal-50 cursor-pointer"><div class="flex justify-between text-xs"><span class="font-bold"><i class="fa-solid fa-road text-slate-600 w-5"></i> โครงข่ายถนน</span><span id="spatialStatusRoad" class="text-gray-400">ยังไม่มีข้อมูล</span></div><input type="file" accept=".geojson,.json,.kml" class="hidden" onchange="App.spatial.importLayer('road',this)"></label>
+                                <label class="block border rounded-lg p-2.5 hover:bg-teal-50 cursor-pointer"><div class="flex justify-between text-xs"><span class="font-bold"><i class="fa-solid fa-school-flag text-rose-600 w-5"></i> สถานที่สำคัญ</span><span id="spatialStatusFacility" class="text-gray-400">ยังไม่มีข้อมูล</span></div><input type="file" accept=".geojson,.json,.kml" class="hidden" onchange="App.spatial.importLayer('facility',this)"></label>
+                            </div>
+                            <div id="spatialLayerMessage" class="hidden mt-3 text-xs rounded-lg p-2.5"></div>
+                            <div class="mt-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg p-2.5 text-[10px] leading-relaxed">
+                                <strong>ฟิลด์ที่ระบบอ่าน:</strong> ชั้นความลาดชันใช้ <code>slope_pct</code> หรือ <code>slope</code> · ชั้นชุมชนใช้ <code>population</code>, <code>pop</code> หรือ <code>households</code> · ชั้นน้ำท่วม ถนน และสถานที่สำคัญใช้ตำแหน่งรูปทรงโดยตรง
+                            </div>
+                        </section>
+
+                        <section class="bg-white border rounded-xl shadow-sm p-4">
+                            <h4 class="font-bold text-teal-800 mb-3"><i class="fa-solid fa-scale-balanced mr-2"></i>น้ำหนักการวิเคราะห์</h4>
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <label>ความลาดชัน (%)<input id="weightSlope" type="number" min="0" max="100" value="20" class="mt-1 w-full border rounded px-2 py-1.5"></label>
+                                <label>น้ำท่วม (%)<input id="weightFlood" type="number" min="0" max="100" value="20" class="mt-1 w-full border rounded px-2 py-1.5"></label>
+                                <label>ชุมชน (%)<input id="weightCommunity" type="number" min="0" max="100" value="25" class="mt-1 w-full border rounded px-2 py-1.5"></label>
+                                <label>การเชื่อมต่อ (%)<input id="weightRoad" type="number" min="0" max="100" value="25" class="mt-1 w-full border rounded px-2 py-1.5"></label>
+                                <label>สถานที่สำคัญ (%)<input id="weightFacility" type="number" min="0" max="100" value="10" class="mt-1 w-full border rounded px-2 py-1.5"></label>
+                                <label>รัศมีชุมชน (ม.)<input id="spatialBufferMeters" type="number" min="50" max="5000" value="500" class="mt-1 w-full border rounded px-2 py-1.5"></label>
+                            </div>
+                            <div class="mt-3 flex items-center justify-between"><span id="spatialWeightTotal" class="text-xs font-bold text-gray-600">รวมน้ำหนัก 100%</span><button onclick="App.spatial.run()" class="bg-teal-700 hover:bg-teal-800 text-white font-bold text-sm px-4 py-2 rounded-lg shadow"><i class="fa-solid fa-play mr-1"></i> วิเคราะห์และจัดอันดับ</button></div>
+                        </section>
+                    </aside>
+
+                    <main class="xl:col-span-8 space-y-4">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div class="bg-white border rounded-xl p-3 shadow-sm"><div class="text-[11px] text-gray-500">โครงการที่วิเคราะห์</div><div id="spatialProjectCount" class="text-2xl font-bold text-teal-700">0</div></div>
+                            <div class="bg-white border rounded-xl p-3 shadow-sm"><div class="text-[11px] text-gray-500">ข้อมูลครบเฉลี่ย</div><div id="spatialConfidenceAverage" class="text-2xl font-bold text-blue-700">0%</div></div>
+                            <div class="bg-white border rounded-xl p-3 shadow-sm"><div class="text-[11px] text-gray-500">ระดับ A</div><div id="spatialGradeACount" class="text-2xl font-bold text-emerald-700">0</div></div>
+                            <div class="bg-white border rounded-xl p-3 shadow-sm"><div class="text-[11px] text-gray-500">ยังไม่มีแนวโครงการ</div><div id="spatialNoGeometryCount" class="text-2xl font-bold text-orange-600">0</div></div>
+                        </div>
+                        <section id="spatialDetailPanel" class="hidden bg-white border border-teal-200 rounded-xl shadow-sm p-4"></section>
+                        <section class="bg-white border rounded-xl shadow-sm overflow-hidden">
+                            <div class="p-3 border-b flex flex-col md:flex-row gap-2 justify-between md:items-center"><div><h4 class="font-bold text-gray-800">ลำดับความเหมาะสมโครงการถนน</h4><p class="text-[11px] text-gray-500">คะแนนคำนวณเฉพาะปัจจัยที่มีข้อมูล และแสดงความครบถ้วนแยกต่างหาก</p></div><select id="spatialDistrictFilter" onchange="App.spatial.renderResults()" class="border rounded px-3 py-2 text-xs"><option value="">ทุกอำเภอ</option></select></div>
+                            <div class="overflow-auto max-h-[55vh] custom-scroll">
+                                <table class="w-full text-xs text-left min-w-[900px]"><thead class="sticky top-0 bg-gray-100 text-gray-700"><tr><th class="p-3 text-center">อันดับ</th><th class="p-3">โครงการ</th><th class="p-3 text-center">คะแนน</th><th class="p-3 text-center">ระดับ</th><th class="p-3 text-center">ข้อมูลครบ</th><th class="p-3 text-center">ลาดชัน</th><th class="p-3 text-center">น้ำท่วม</th><th class="p-3 text-center">ชุมชน</th><th class="p-3 text-center">เชื่อมถนน</th><th class="p-3 text-center">สถานที่</th><th class="p-3 text-center">ตรวจสอบ</th></tr></thead><tbody id="spatialResultBody"><tr><td colspan="11" class="p-10 text-center text-gray-400">นำเข้าชั้นข้อมูลแล้วกด “วิเคราะห์และจัดอันดับ”</td></tr></tbody></table>
+                            </div>
+                        </section>
+                    </main>
+                </div>
+            </div>
+            <div class="bg-white border-t px-5 py-3 flex justify-between items-center shrink-0"><span class="text-[11px] text-gray-500"><i class="fa-solid fa-circle-info mr-1"></i>ผลวิเคราะห์เป็นข้อมูลประกอบการพิจารณา ต้องตรวจสอบกับการสำรวจภาคสนาม</span><button onclick="App.ui.closeModal('spatialAnalysisModal')" class="px-5 py-2 bg-gray-200 rounded-lg font-bold text-sm">ปิด</button></div>
+        </div>
+    </div>
+
+    <!-- Ordinance Projects Folder -->
+    <div id="ordinanceModal" class="fixed inset-0 bg-gray-900/60 z-[3200] hidden items-center justify-center p-4 md:p-6 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden">
+            <div class="bg-indigo-700 text-white px-6 py-4 flex justify-between items-center shrink-0 shadow-sm">
+                <div>
+                    <h3 class="font-bold text-lg flex items-center"><i class="fa-solid fa-folder-tree mr-2"></i> แฟ้มโครงการข้อบัญญัติ</h3>
+                    <p class="text-indigo-100 text-xs mt-1">โครงการที่ยกระดับจากแฟ้มประสานแผน พร้อมการเชื่อมโยงกลับไปยังโครงการต้นทาง</p>
+                </div>
+                <button onclick="App.ui.closeModal('ordinanceModal')" class="text-indigo-100 hover:text-white bg-indigo-800 hover:bg-indigo-900 rounded-full w-8 h-8 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-6 bg-slate-50 flex flex-col flex-1 overflow-hidden">
+                <div class="mb-4 flex flex-col md:flex-row items-start md:items-center justify-between bg-white p-3 rounded-lg border border-gray-200 shadow-sm gap-3">
+                    <div class="relative w-full md:max-w-md">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-400"></i>
+                        <input id="ordinanceSearchInput" oninput="App.ui.renderOrdinanceTable()" type="text" placeholder="ค้นหาชื่อโครงการ อำเภอ หรือหน่วยงาน" class="w-full border border-gray-300 rounded-md pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <span id="ordinanceResultCount" class="text-sm font-bold text-indigo-700 bg-indigo-100 px-4 py-1.5 rounded-full">รวม 0 โครงการ</span>
+                </div>
+                <div class="flex-1 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-sm custom-scroll">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead class="bg-gray-100 text-gray-700 sticky top-0 border-b border-gray-200 z-10">
+                            <tr>
+                                <th class="p-3 text-center w-14">ลำดับ</th>
+                                <th class="p-3">อำเภอ / หน่วยงาน</th>
+                                <th class="p-3">โครงการข้อบัญญัติ</th>
+                                <th class="p-3 text-center">สถานะ</th>
+                                <th class="p-3 text-center">วันที่ยกระดับ</th>
+                                <th class="p-3 text-center">ดำเนินการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordinanceListBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="bg-white px-6 py-4 border-t flex justify-end shrink-0">
+                <button onclick="App.ui.closeModal('ordinanceModal')" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg font-bold">ปิด</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upgrade Confirmation -->
+    <div id="upgradeConfirmModal" class="fixed inset-0 bg-gray-900/60 z-[4200] hidden items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div class="bg-indigo-700 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="font-bold flex items-center"><i class="fa-solid fa-arrow-up-right-dots mr-2"></i> ยืนยันการยกระดับโครงการ</h3>
+                <button onclick="App.ui.closeModal('upgradeConfirmModal')" class="text-indigo-100 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-6">
+                <p id="upgradeConfirmText" class="text-gray-700 text-sm font-medium leading-relaxed mb-3"></p>
+                <div class="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 text-xs leading-relaxed mb-6">
+                    <i class="fa-solid fa-circle-info mr-1"></i> ระบบจะสร้างแฟ้มข้อบัญญัติใหม่ เชื่อมโยงกับโครงการต้นทาง และป้องกันการยกระดับซ้ำ โดยไม่ลบประวัติเดิม
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" onclick="App.ui.closeModal('upgradeConfirmModal')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-bold text-sm">ยกเลิก</button>
+                    <button id="btnExecuteUpgrade" type="button" onclick="App.features.executeUpgrade()" class="px-5 py-2 bg-indigo-700 text-white rounded-lg hover:bg-indigo-800 font-bold text-sm shadow-sm flex items-center"><i class="fa-solid fa-arrow-up-right-dots mr-2"></i> ยืนยันยกระดับ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Manage Modal -->
     <div id="manageDataModal" class="fixed inset-0 bg-gray-900/60 z-[3000] hidden items-center justify-center p-4 backdrop-blur-sm transition-opacity">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
@@ -471,7 +607,9 @@
                 previewLayer: null, kmlLayer: null, currentGeoJSON: null, currentRoutes: [], currentRouteIndex: 0,
                 proposals: [], currentUser: null, isPicking: false, pickingType: null,
                 deleteTargetId: null, editingId: null, charts: { countChart: null, budgetChart: null },
-                attachments: [], existingAttachments: []
+                attachments: [], existingAttachments: [], upgradeTargetId: null,
+                spatialLayers: { slope:null, flood:null, community:null, road:null, facility:null },
+                spatialLayerNames: {}, spatialResults: [], spatialDisplayLayer: null, spatialHighlightLayer: null
             },
             
             ui: {
@@ -507,6 +645,52 @@
                 },
                 formatNumberInput(input) { let val = input.value.replace(/,/g, ''); if (isNaN(val) || val === '') { input.value = ''; return; } input.value = parseInt(val).toLocaleString('en-US'); },
                 toggleOtherOptions(checkbox) { const div = document.getElementById('otherOptions'); checkbox.checked ? div.classList.remove('hidden') : div.classList.add('hidden'); },
+                escapeHtml(value) {
+                    return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+                },
+                updateOrdinanceFolderCount() {
+                    const el = document.getElementById('ordinanceFolderCount');
+                    if(el) el.innerText = App.state.proposals.filter(p => p.projectType === 'ordinance' && p.ordinanceActive !== false).length;
+                },
+                getWorkflowStatus(project) {
+                    if(project?.workflowStatus) return project.workflowStatus;
+                    if(project?.status === 'ได้รับคัดเลือกเข้าสู่ข้อบัญญัติ') return 'ได้รับคัดเลือกเข้าสู่ข้อบัญญัติ';
+                    if(project?.status === 'ยกระดับเป็นโครงการข้อบัญญัติแล้ว' || project?.ordinanceProjectId) return 'ยกระดับเป็นโครงการข้อบัญญัติแล้ว';
+                    return 'รับเรื่อง';
+                },
+                getProjectName(project) {
+                    if(!project) return '';
+                    const getDirectName = item => {
+                        if(!item) return '';
+                        const isMeaningfulName = value => {
+                            const text = String(value ?? '').trim();
+                            return text !== '' && !/^[-–—]+$/.test(text);
+                        };
+                        const candidates = [
+                            item.projectNameNew, item.projectNameOld, item.projectName,
+                            item.newProjectName, item.oldProjectName, item.projectTitle,
+                            item.project_name, item.project_title, item.name, item.title
+                        ];
+                        let found = candidates.find(isMeaningfulName);
+                        if(found !== undefined) return String(found).trim();
+                        const dynamicEntry = Object.entries(item).find(([key, value]) => {
+                            const normalizedKey = String(key).toLowerCase().replace(/[_\s-]/g, '');
+                            const looksLikeProjectName = (normalizedKey.includes('project') && (normalizedKey.includes('name') || normalizedKey.includes('title'))) || normalizedKey.includes('ชื่อโครงการ');
+                            return looksLikeProjectName && typeof value === 'string' && isMeaningfulName(value);
+                        });
+                        return dynamicEntry ? dynamicEntry[1].trim() : '';
+                    };
+                    const directName = getDirectName(project);
+                    if(directName) return directName;
+                    const linked = project.projectType === 'ordinance'
+                        ? App.state.proposals.find(p => p.id === project.sourceCoordinationId && p.projectType !== 'ordinance')
+                        : App.state.proposals.find(p => p.projectType === 'ordinance' && (p.id === project.ordinanceProjectId || p.sourceCoordinationId === project.id));
+                    return getDirectName(linked);
+                },
+                findLinkedOrdinance(project) {
+                    if(!project) return null;
+                    return App.state.proposals.find(p => p.projectType === 'ordinance' && p.ordinanceActive !== false && (p.id === project.ordinanceProjectId || p.sourceCoordinationId === project.id)) || null;
+                },
                 updateCoordDisplay() {
                     if (!App.state.currentLatLng) return; const sys = document.getElementById('coordSystem').value; const el = document.getElementById('coordDisplay'); const { lat, lng } = App.state.currentLatLng;
                     if (sys === 'latlng') el.innerHTML = `<div class="flex justify-between"><span>Lat:</span> <span>${lat.toFixed(6)}</span></div><div class="flex justify-between"><span>Lng:</span> <span>${lng.toFixed(6)}</span></div>`;
@@ -517,7 +701,7 @@
                 },
                 renderSearchTable() {
                     const tbody = document.getElementById('searchListBody'); const kw = document.getElementById('searchInput').value.toLowerCase();
-                    const filtered = App.state.proposals.filter(p => `${p.district||''} ${p.projectNameNew||''} ${p.projectNameOld||''} ${p.agencyName||''}`.toLowerCase().includes(kw));
+                    const filtered = App.state.proposals.filter(p => p.projectType !== 'ordinance' && `${p.district||''} ${App.ui.getProjectName(p)} ${p.agencyName||''}`.toLowerCase().includes(kw));
                     document.getElementById('searchResultCount').innerText = `พบ ${filtered.length} รายการ`;
                     if (!filtered.length) return tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-gray-500">ไม่พบข้อมูล</td></tr>';
                     
@@ -525,13 +709,13 @@
                         let totalB = ['b2566','b2567','b2568','b2569','b2570'].reduce((sum, yr) => sum + parseFloat(p.budget?.[yr]?.replace(/,/g,'')||0), 0);
                         let sc = p.status === 'เหมาะสม' ? 'bg-emerald-100 text-emerald-800' : (p.status === 'ไม่เหมาะสม' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800');
                         const isSyncOk = App.features.checkGeometrySync(p); const warn = !isSyncOk ? `<i class="fa-solid fa-triangle-exclamation text-red-500 ml-2" title="พิกัดคลาดเคลื่อน"></i>` : '';
-                        const nameDisplay = p.projectNameNew || p.projectNameOld || '(ไม่มีชื่อโครงการ)';
+                        const nameDisplay = App.ui.getProjectName(p) || '(ไม่มีชื่อโครงการ)';
                         return `<tr class="border-b hover:bg-indigo-50">
                             <td class="p-3 text-center font-bold text-gray-600">${i + 1}</td>
                             <td class="p-3">อ.${p.district||'-'} <span class="text-gray-500 font-medium">(${p.agencyName||'-'})</span> <span class="text-xs text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">(ลำดับที่ ${p.seqNo||'-'})</span></td>
                             <td class="p-3 font-medium max-w-[200px] truncate text-blue-700" title="${nameDisplay}">${nameDisplay}${warn}</td>
                             <td class="p-3 text-right font-bold">฿${totalB.toLocaleString()}</td>
-                            <td class="p-3 text-center"><span class="${sc} px-2 py-1 rounded text-xs font-bold">${p.status||'รอพิจารณา'}</span></td>
+                            <td class="p-3 text-center"><span class="${sc} px-2 py-1 rounded text-xs font-bold">${p.status||'รอพิจารณา'}</span><div class="mt-1.5 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-1.5 py-1 whitespace-normal">${App.ui.getWorkflowStatus(p)}</div></td>
                             <td class="p-3 text-center whitespace-nowrap">
                                 <button onclick="App.features.openProposalDetail('${p.id}')" class="bg-sky-100 text-sky-700 hover:bg-sky-200 px-2 py-1 rounded text-xs mr-1" title="ดูรายละเอียด"><i class="fa-solid fa-info"></i></button>
                                 <button onclick="App.features.panTo('${p.id}')" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-2 py-1 rounded text-xs mr-1" title="ซูมดูในแผนที่"><i class="fa-solid fa-map"></i></button>
@@ -542,7 +726,7 @@
                 },
                 renderAgencyProjectTable(dist, agc) {
                     const tbody = document.getElementById('agencyProjectListBody');
-                    const filtered = App.state.proposals.filter(p => p.district === dist && p.agencyName === agc);
+                    const filtered = App.state.proposals.filter(p => p.projectType !== 'ordinance' && p.district === dist && p.agencyName === agc);
                     filtered.sort((a, b) => (parseInt(a.seqNo) || 1) - (parseInt(b.seqNo) || 1));
                     
                     document.getElementById('agencyProjectCount').innerText = `พบ ${filtered.length} โครงการในหน่วยงานนี้`;
@@ -551,13 +735,13 @@
                         return;
                     }
                     tbody.innerHTML = filtered.map((p, i) => {
-                        const name = p.projectNameNew || p.projectNameOld || '(ไม่มีชื่อโครงการ)';
+                        const name = App.ui.getProjectName(p) || '(ไม่มีชื่อโครงการ)';
                         const totalB = ['b2566','b2567','b2568','b2569','b2570'].reduce((sum, yr) => sum + parseFloat(p.budget?.[yr]?.replace(/,/g,'')||0), 0);
                         return `<tr class="border-b hover:bg-amber-50">
                             <td class="p-3 text-center font-bold text-blue-700">${p.seqNo || (i+1)}</td>
                             <td class="p-3 font-medium max-w-[250px] truncate" title="${name}">${name}</td>
                             <td class="p-3 text-right font-bold">฿${totalB.toLocaleString()}</td>
-                            <td class="p-3 text-center"><span class="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-bold">${p.status||'รอพิจารณา'}</span></td>
+                            <td class="p-3 text-center"><span class="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-bold">${p.status||'รอพิจารณา'}</span><div class="mt-1.5 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-1.5 py-1 whitespace-normal">${App.ui.getWorkflowStatus(p)}</div></td>
                             <td class="p-3 text-center whitespace-nowrap">
                                 <button onclick="App.ui.closeModal('agencyProjectModal'); App.features.editProject('${p.id}');" class="bg-amber-100 text-amber-800 hover:bg-amber-200 px-2.5 py-1 rounded text-xs font-bold mr-1"><i class="fa-solid fa-pen-to-square mr-1"></i> แก้ไข</button>
                                 <button onclick="App.features.confirmDelete('${p.id}');" class="bg-red-100 text-red-700 hover:bg-red-200 px-2.5 py-1 rounded text-xs font-bold"><i class="fa-solid fa-trash-can mr-1"></i> ลบ</button>
@@ -568,14 +752,18 @@
                 renderAnalyzeTable() {
                     const tbody = document.getElementById('analyzeListBody');
                     const filterDist = document.getElementById('analyzeDistrictFilter')?.value || '';
-                    const filteredProposals = App.state.proposals.filter(p => filterDist === '' || p.district === filterDist);
+                    const filteredProposals = App.state.proposals.filter(p => p.projectType !== 'ordinance' && (filterDist === '' || p.district === filterDist));
                     
                     const countEl = document.getElementById('analyzeResultCount');
                     if(countEl) countEl.innerText = `รวม ${filteredProposals.length} โครงการ`;
 
-                    if (!filteredProposals.length) return tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-500">ไม่มีข้อมูล</td></tr>';
+                    if (!filteredProposals.length) return tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-gray-500">ไม่มีข้อมูล</td></tr>';
                     tbody.innerHTML = filteredProposals.map((p, i) => {
-                        const n = p.projectNameNew || p.projectNameOld || '-';
+                        const n = App.ui.getProjectName(p) || '-';
+                        const workflowStatus = App.ui.getWorkflowStatus(p);
+                        const linkedOrdinance = App.ui.findLinkedOrdinance(p);
+                        const standardAnalysisStatuses = ['รอพิจารณา','เหมาะสม','ไม่เหมาะสม'];
+                        const hasLegacyAnalysisStatus = standardAnalysisStatuses.includes(p.status);
                         const chk = p.checklist || {};
                         const c1 = chk.chk1 ? `<span class="text-emerald-600"><i class="fa-solid fa-check"></i> 1. ขนาดพื้นที่เป็นไปตามกรอบฯ</span>` : `<span class="text-red-500"><i class="fa-solid fa-xmark"></i> 1. ขนาดพื้นที่เป็นไปตามกรอบฯ</span>`;
                         const c2 = chk.chk2 ? `<span class="text-emerald-600"><i class="fa-solid fa-check"></i> 2. พิกัดทางภูมิศาสตร์ถูกต้อง</span>` : `<span class="text-red-500"><i class="fa-solid fa-xmark"></i> 2. พิกัดทางภูมิศาสตร์ถูกต้อง</span>`;
@@ -593,7 +781,56 @@
                             <td class="p-3">อ.${p.district||'-'} <span class="text-gray-500 font-medium">(${p.agencyName||'-'})</span> <span class="text-xs text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">(ลำดับที่ ${p.seqNo||'-'})</span></td>
                             <td class="p-3 max-w-[250px]"><div class="font-bold text-gray-800 truncate" title="${n}">${n}</div></td>
                             <td class="p-3 text-xs leading-5"><div>${c1}</div><div>${c2}</div><div>${c3}</div><div>${c4}</div>${c5}${alertBox}</td>
-                            <td class="p-3 text-center"><select onchange="App.db.updateStatus('${p.id}', this.value)" class="w-full border rounded px-2 py-1.5 text-xs font-bold outline-none"><option value="รอพิจารณา" ${p.status==='รอพิจารณา'?'selected':''}>รอพิจารณา</option><option value="เหมาะสม" ${p.status==='เหมาะสม'?'selected':''}>เหมาะสม</option><option value="ไม่เหมาะสม" ${p.status==='ไม่เหมาะสม'?'selected':''}>ไม่เหมาะสม</option></select></td>
+                            <td class="p-3 text-center min-w-[190px] bg-fuchsia-50/30">
+                                <select onchange="App.db.updateStatus('${p.id}', this.value)" class="w-full border rounded px-2 py-1.5 text-xs font-bold outline-none bg-white">
+                                    ${!hasLegacyAnalysisStatus ? `<option value="${App.ui.escapeHtml(p.status||'รอพิจารณา')}" selected>ข้อมูลเดิม: ${App.ui.escapeHtml(p.status||'รอพิจารณา')}</option>` : ''}
+                                    <option value="รอพิจารณา" ${p.status==='รอพิจารณา'?'selected':''}>รอพิจารณา</option>
+                                    <option value="เหมาะสม" ${p.status==='เหมาะสม'?'selected':''}>เหมาะสม</option>
+                                    <option value="ไม่เหมาะสม" ${p.status==='ไม่เหมาะสม'?'selected':''}>ไม่เหมาะสม</option>
+                                </select>
+                            </td>
+                            <td class="p-3 text-center min-w-[270px] bg-indigo-50/30">
+                                <select onchange="App.db.updateWorkflowStatus('${p.id}', this.value)" ${workflowStatus==='ยกระดับเป็นโครงการข้อบัญญัติแล้ว'?'disabled':''} class="w-full border border-indigo-200 rounded px-2 py-1.5 text-xs font-bold outline-none ${workflowStatus==='ยกระดับเป็นโครงการข้อบัญญัติแล้ว'?'bg-indigo-100 text-indigo-800':'bg-white text-gray-700'}">
+                                    <option value="รับเรื่อง" ${workflowStatus==='รับเรื่อง'?'selected':''}>1. รับเรื่อง</option>
+                                    <option value="รอสำรวจ" ${workflowStatus==='รอสำรวจ'?'selected':''}>2. รอสำรวจ</option>
+                                    <option value="อยู่ระหว่างสำรวจ" ${workflowStatus==='อยู่ระหว่างสำรวจ'?'selected':''}>3. อยู่ระหว่างสำรวจ</option>
+                                    <option value="ตรวจสอบแล้ว" ${workflowStatus==='ตรวจสอบแล้ว'?'selected':''}>4. ตรวจสอบแล้ว</option>
+                                    <option value="ส่งฝ่ายแผน" ${workflowStatus==='ส่งฝ่ายแผน'?'selected':''}>5. ส่งฝ่ายแผน</option>
+                                    <option value="บรรจุแผนประจำปี" ${workflowStatus==='บรรจุแผนประจำปี'?'selected':''}>6. บรรจุแผนประจำปี</option>
+                                    <option value="รอพิจารณาข้อบัญญัติ" ${workflowStatus==='รอพิจารณาข้อบัญญัติ'?'selected':''}>7. รอพิจารณาข้อบัญญัติ</option>
+                                    <option value="ได้รับคัดเลือกเข้าสู่ข้อบัญญัติ" ${workflowStatus==='ได้รับคัดเลือกเข้าสู่ข้อบัญญัติ'?'selected':''}>8. ได้รับคัดเลือกเข้าสู่ข้อบัญญัติ</option>
+                                    <option value="ไม่ได้รับคัดเลือก" ${workflowStatus==='ไม่ได้รับคัดเลือก'?'selected':''}>ไม่ได้รับคัดเลือก</option>
+                                    <option value="ยกระดับเป็นโครงการข้อบัญญัติแล้ว" ${workflowStatus==='ยกระดับเป็นโครงการข้อบัญญัติแล้ว'?'selected':''}>ยกระดับเป็นข้อบัญญัติแล้ว</option>
+                                </select>
+                                ${linkedOrdinance ? `<button onclick="App.features.openLinkedOrdinance('${linkedOrdinance.id}')" class="mt-2 w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-800 border border-indigo-200 px-3 py-2 rounded text-xs font-bold"><i class="fa-solid fa-link mr-1"></i> เปิดแฟ้มข้อบัญญัติ</button>` : ''}
+                            </td>
+                        </tr>`;
+                    }).join('');
+                },
+                renderOrdinanceTable() {
+                    const tbody = document.getElementById('ordinanceListBody');
+                    if(!tbody) return;
+                    const kw = (document.getElementById('ordinanceSearchInput')?.value || '').trim().toLowerCase();
+                    const items = App.state.proposals
+                        .filter(p => p.projectType === 'ordinance' && p.ordinanceActive !== false)
+                        .filter(p => `${p.district||''} ${p.agencyName||''} ${App.ui.getProjectName(p)}`.toLowerCase().includes(kw))
+                        .sort((a,b) => String(b.upgradedAt||b.timestamp||'').localeCompare(String(a.upgradedAt||a.timestamp||'')));
+                    document.getElementById('ordinanceResultCount').innerText = `รวม ${items.length} โครงการ`;
+                    if(!items.length) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-gray-500"><i class="fa-solid fa-folder-open text-3xl text-gray-300 mb-3 block"></i>ยังไม่มีโครงการที่ยกระดับเป็นข้อบัญญัติ</td></tr>';
+                        return;
+                    }
+                    tbody.innerHTML = items.map((p, i) => {
+                        const e = App.ui.escapeHtml;
+                        let upgradedDate = '-';
+                        if(p.upgradedAt) { const d = new Date(p.upgradedAt); if(!isNaN(d)) upgradedDate = d.toLocaleDateString('th-TH'); }
+                        return `<tr class="border-b hover:bg-indigo-50">
+                            <td class="p-3 text-center font-bold text-indigo-700">${i+1}</td>
+                            <td class="p-3">อ.${e(p.district||'-')}<div class="text-xs text-gray-500 mt-1">${e(p.agencyName||'-')}</div></td>
+                            <td class="p-3 max-w-[360px]"><div class="font-bold text-gray-800 whitespace-normal">${e(App.ui.getProjectName(p)||'ไม่มีชื่อโครงการ')}</div><div class="text-[10px] text-indigo-500 mt-1 font-mono">${e(p.id)}</div></td>
+                            <td class="p-3 text-center"><span class="bg-indigo-100 text-indigo-800 border border-indigo-200 px-2 py-1 rounded-full text-xs font-bold">${e(p.ordinanceStatus||'เตรียมดำเนินการ')}</span></td>
+                            <td class="p-3 text-center text-gray-600">${upgradedDate}</td>
+                            <td class="p-3 text-center min-w-[170px]"><div class="flex flex-col gap-1.5"><button onclick="App.features.returnOrdinanceToConsideration('${p.id}')" class="w-full bg-orange-100 text-orange-800 hover:bg-orange-200 border border-orange-200 px-3 py-1.5 rounded text-xs font-bold"><i class="fa-solid fa-arrow-rotate-left mr-1"></i> ส่งกลับพิจารณา</button><button onclick="App.features.editOrdinanceProject('${p.id}')" class="w-full bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200 px-3 py-1.5 rounded text-xs font-bold"><i class="fa-solid fa-pen-to-square mr-1"></i> แก้ไขข้อมูล</button><button onclick="App.features.openProposalDetail('${p.id}')" class="w-full bg-sky-100 text-sky-700 hover:bg-sky-200 px-3 py-1.5 rounded text-xs font-bold"><i class="fa-solid fa-circle-info mr-1"></i> รายละเอียด</button><button onclick="App.features.openSourceCoordination('${p.sourceCoordinationId||''}')" class="w-full bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded text-xs font-bold"><i class="fa-solid fa-link mr-1"></i> โครงการต้นทาง</button></div></td>
                         </tr>`;
                     }).join('');
                 }
@@ -609,8 +846,9 @@
                     L.control.zoom({ position: 'bottomright' }).addTo(m);
 
                     App.state.kmlLayer = L.featureGroup().addTo(m); App.state.previewLayer = L.featureGroup().addTo(m);
+                    App.state.spatialDisplayLayer = L.featureGroup().addTo(m); App.state.spatialHighlightLayer = L.featureGroup().addTo(m);
                     m.on('mousemove', (e) => { App.state.currentLatLng = e.latlng; App.ui.updateCoordDisplay(); });
-                    m.on('click', (e) => { if(App.state.isPicking) App.features.finishPicking(e.latlng.lat, e.latlng.lng); });
+                    m.on('click', (e) => { if(App.roadMeasure.active && App.roadMeasure.picking) { App.roadMeasure.add(e.latlng); return; } if(App.state.isPicking) App.features.finishPicking(e.latlng.lat, e.latlng.lng); });
                 },
                 setTempMarker(lat, lng, type) {
                     if(App.state.tempMarkers[type]) App.state.map.removeLayer(App.state.tempMarkers[type]);
@@ -621,7 +859,7 @@
                 },
                 drawMarkers() {
                     App.state.kmlLayer.clearLayers();
-                    App.state.proposals.forEach(p => {
+                    App.state.proposals.filter(p => p.projectType !== 'ordinance').forEach(p => {
                         const isSyncOk = App.features.checkGeometrySync(p);
                         const cLine = isSyncOk ? (p.lineColor || '#3b82f6') : '#ef4444';
                         let pGeo = null; if(p.geoJSON) try { pGeo = typeof p.geoJSON === 'string' ? JSON.parse(p.geoJSON) : p.geoJSON; } catch(e){}
@@ -630,10 +868,11 @@
                             const layer = L.geoJSON(pGeo, { style: { color: cLine, weight: p.lineWeight || 5, dashArray: p.lineStyle==='dashed'?'10,10':null, opacity: 0.8 } });
                             const d = App.features.calculateLength(pGeo);
                             
+                            const projectName = App.ui.escapeHtml(App.ui.getProjectName(p) || 'ไม่มีชื่อโครงการ');
                             let t = `
                             <div class="font-sans w-56 md:w-64 whitespace-normal break-words">
-                                <div class="font-bold ${isSyncOk?'text-blue-800':'text-red-700'} text-[13px] leading-snug mb-1.5 border-b border-gray-200 pb-1.5">
-                                    ${p.projectNameNew || p.projectNameOld || 'ไม่มีชื่อโครงการ'}
+                                <div style="display:block !important;color:${isSyncOk?'#1e40af':'#b91c1c'} !important;font-size:13px !important;font-weight:700 !important;line-height:1.45 !important;white-space:normal !important;overflow-wrap:anywhere !important;word-break:break-word !important;padding:0 0 6px 0 !important;margin:0 0 6px 0 !important;border-bottom:1px solid #e5e7eb !important;visibility:visible !important;opacity:1 !important;">
+                                    <i class="fa-solid fa-diagram-project" style="margin-right:5px"></i><span>ชื่อโครงการ: ${projectName}</span>
                                 </div>
                                 <div class="flex justify-between items-start text-[11px] text-gray-600 mb-2 gap-2">
                                     <div class="leading-tight"><i class="fa-solid fa-building mr-1 text-gray-400"></i>${p.agencyName||'-'}<br><span class="text-gray-400 text-[10px] ml-3">(อ.${p.district||'-'})</span></div>
@@ -641,6 +880,7 @@
                                 </div>`;
                             
                             if(d>0) t += `<div class="text-sky-700 font-bold text-[11px] bg-sky-50/80 px-2 py-1 rounded border border-sky-100 mb-1.5 flex items-center"><i class="fa-solid fa-ruler mr-1.5 text-sky-500"></i>ระยะทางบนแผนที่: ${d.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} ม.</div>`;
+                            t += `<div class="text-indigo-700 font-bold text-[11px] bg-indigo-50 px-2 py-1 rounded border border-indigo-100 mb-1.5"><i class="fa-solid fa-route mr-1.5"></i>ขั้นตอน: ${App.ui.getWorkflowStatus(p)}</div>`;
                             if(!isSyncOk) t += `<div class="text-red-600 font-bold text-[11px] bg-red-50 px-2 py-1 rounded border border-red-200 mb-1.5 flex items-center"><i class="fa-solid fa-triangle-exclamation mr-1.5"></i>พิกัดคลาดเคลื่อน</div>`;
                             
                             t += `<div class="text-indigo-600 text-[11px] font-bold mt-1 pt-1 border-t border-dashed border-gray-200 text-center"><i class="fa-solid fa-hand-pointer mr-1"></i>คลิกเพื่อดูรายละเอียด</div>
@@ -658,8 +898,8 @@
                                 const mStart = L.marker([p.coordinates.startLat, p.coordinates.startLng], {icon: mkIcon('#3b82f6'), interactive: true});
                                 let tStart = `
                                 <div class="font-sans w-56 md:w-64 whitespace-normal break-words">
-                                    <div class="font-bold text-blue-800 text-[13px] leading-snug mb-1.5 border-b border-gray-200 pb-1.5">
-                                        ${p.projectNameNew || p.projectNameOld || 'ไม่มีชื่อโครงการ'}
+                                    <div style="display:block !important;color:#1e40af !important;font-size:13px !important;font-weight:700 !important;line-height:1.45 !important;white-space:normal !important;overflow-wrap:anywhere !important;word-break:break-word !important;padding:0 0 6px 0 !important;margin:0 0 6px 0 !important;border-bottom:1px solid #e5e7eb !important;visibility:visible !important;opacity:1 !important;">
+                                        <i class="fa-solid fa-diagram-project" style="margin-right:5px"></i><span>ชื่อโครงการ: ${App.ui.escapeHtml(App.ui.getProjectName(p) || 'ไม่มีชื่อโครงการ')}</span>
                                     </div>
                                     <div class="flex justify-between items-center mb-2">
                                         <div class="text-[11px] text-gray-600"><i class="fa-solid fa-building mr-1"></i>${p.agencyName||'-'}</div>
@@ -677,8 +917,8 @@
                                 const mEnd = L.marker([p.coordinates.endLat, p.coordinates.endLng], {icon: mkIcon('#ef4444'), interactive: true});
                                 let tEnd = `
                                 <div class="font-sans w-56 md:w-64 whitespace-normal break-words">
-                                    <div class="font-bold text-red-700 text-[13px] leading-snug mb-1.5 border-b border-gray-200 pb-1.5">
-                                        ${p.projectNameNew || p.projectNameOld || 'ไม่มีชื่อโครงการ'}
+                                    <div style="display:block !important;color:#b91c1c !important;font-size:13px !important;font-weight:700 !important;line-height:1.45 !important;white-space:normal !important;overflow-wrap:anywhere !important;word-break:break-word !important;padding:0 0 6px 0 !important;margin:0 0 6px 0 !important;border-bottom:1px solid #e5e7eb !important;visibility:visible !important;opacity:1 !important;">
+                                        <i class="fa-solid fa-diagram-project" style="margin-right:5px"></i><span>ชื่อโครงการ: ${App.ui.escapeHtml(App.ui.getProjectName(p) || 'ไม่มีชื่อโครงการ')}</span>
                                     </div>
                                     <div class="flex justify-between items-center mb-2">
                                         <div class="text-[11px] text-gray-600"><i class="fa-solid fa-building mr-1"></i>${p.agencyName||'-'}</div>
@@ -693,6 +933,233 @@
                             }
                         }
                     });
+                }
+            },
+
+            roadMeasure: {
+                points: [], result: null, active: false, picking: false, revision: 0,
+                open() {
+                    if(App.state.isPicking) return App.ui.showToast('กรุณาจบการเลือกพิกัดเดิมก่อน','error');
+                    if(!this.panel) {
+                        this.panel=document.createElement('section'); this.panel.id='roadMeasurePanel';
+                        this.panel.style.cssText='position:absolute;right:12px;top:75px;z-index:2100;width:min(370px,calc(100vw - 24px));max-height:80vh;overflow:auto;background:white;padding:18px;border:1px solid #93c5fd;border-radius:12px;box-shadow:0 6px 24px #0003;font-size:14px';
+                        this.panel.innerHTML=`<div class="flex justify-between items-center mb-3"><strong class="text-blue-800">หาแนวถนนตามระยะทาง</strong><button onclick="App.roadMeasure.close()" aria-label="ปิดเครื่องมือ">✕</button></div>
+                        <label for="rmLength">ระยะทางที่ต้องการ (เมตร)</label><input id="rmLength" type="number" min="1" max="100000" value="1500" step="any" class="border rounded p-2 w-full my-2" oninput="App.roadMeasure.invalidate()">
+                        <label for="rmMode">วิธีกำหนดแนว</label><select id="rmMode" class="border rounded p-2 w-full my-2" onchange="App.roadMeasure.invalidate()"><option value="road">ตามถนนอัตโนมัติ (ออนไลน์)</option><option value="manual">วาดตามแนวเอง (ไม่เกาะถนนอัตโนมัติ)</option></select>
+                        <p class="text-gray-600 mb-3">คลิกจุดเริ่มต้น แล้วคลิกจุดผ่านตามลำดับไปตามสายทาง ให้จุดสุดท้ายอยู่เลยระยะที่ต้องการ ระบบจะตัดปลายเส้นให้เอง หากมีทางแยกให้เพิ่มจุดผ่านเพื่อกำหนดสายทาง</p>
+                        <div class="flex flex-wrap gap-2"><button class="bg-blue-100 text-blue-800 rounded p-2" onclick="App.roadMeasure.pick()">เลือกจุดบนแผนที่</button><button class="bg-gray-100 rounded p-2" onclick="App.roadMeasure.undo()">ย้อนจุดล่าสุด</button><button class="bg-red-50 text-red-700 rounded p-2" onclick="App.roadMeasure.clear()">ล้างแนว</button></div>
+                        <p id="rmStatus" role="status" aria-live="polite" class="my-3 text-blue-800"></p>
+                        <button id="rmCalculate" class="bg-blue-700 text-white rounded p-2 w-full" onclick="App.roadMeasure.calculate()">คำนวณและตัดตามระยะ</button>
+                        <label class="flex gap-2 my-3"><input id="rmReviewed" type="checkbox" onchange="App.roadMeasure.refreshUse()">ตรวจแล้วว่าเส้นไปตามถนนที่ต้องการ</label>
+                        <button id="rmUse" disabled class="bg-emerald-700 text-white rounded p-2 w-full disabled:opacity-40" onclick="App.roadMeasure.use()">ใช้แนวนี้สร้างโครงการ</button>
+                        <p class="mt-3 text-gray-500">ระยะตามแนวแผนที่ ไม่ใช่ระยะสำรวจจริง โหมดออนไลน์ส่งเฉพาะจุดที่เลือกไปยัง OSRM และอาจเลือกทางอ้อมตามกฎจราจร หากหาเส้นทางไม่ได้จะไม่สร้างเส้นตรงทดแทน</p>`;
+                        document.body.appendChild(this.panel); L.DomEvent.disableClickPropagation(this.panel); L.DomEvent.disableScrollPropagation(this.panel);
+                        this.layer=L.featureGroup().addTo(App.state.map);
+                    }
+                    this.panel.hidden=false; this.active=true; this.draw(); this.status('กดเลือกจุดบนแผนที่เพื่อเริ่ม หรือปรับแนวเดิม');
+                },
+                status(text) { document.getElementById('rmStatus').textContent=text; },
+                invalidate() { this.revision++; this.controller?.abort(); this.result=null; document.getElementById('rmReviewed').checked=false; this.refreshUse(); this.draw(); },
+                refreshUse() { document.getElementById('rmUse').disabled=!(this.result&&document.getElementById('rmReviewed').checked); },
+                pick() { this.picking=true; document.getElementById('map').style.cursor='crosshair'; this.status('คลิกจุดบนแผนที่ตามลำดับ แล้วกดคำนวณเมื่อเลือกครบ'); },
+                add(latlng) { if(!this.active||!this.picking)return; if(this.points.length>=20)return this.status('เลือกได้สูงสุด 20 จุด'); this.points.push([latlng.lng,latlng.lat]); this.invalidate(); this.status(`เลือกแล้ว ${this.points.length} จุด — จุดแรกคือจุดเริ่มต้น`); },
+                undo() { this.points.pop(); this.invalidate(); this.status(`เหลือ ${this.points.length} จุด`); },
+                clear() { this.points=[]; this.invalidate(); this.status('ล้างแนวทดลองแล้ว ไม่กระทบโครงการที่บันทึกไว้'); },
+                close() { this.active=false; this.picking=false; this.revision++; this.controller?.abort(); this.panel.hidden=true; this.layer.clearLayers(); document.getElementById('map').style.cursor=''; },
+                draw() {
+                    this.layer.clearLayers();
+                    this.points.forEach((p,i)=>L.circleMarker([p[1],p[0]],{radius:7,color:i?'#f59e0b':'#2563eb',fillOpacity:1}).bindTooltip(i?`จุดผ่าน ${i}`:'จุดเริ่มต้น').addTo(this.layer));
+                    if(this.result) { L.geoJSON(this.result,{style:{color:'#2563eb',weight:6}}).addTo(this.layer); const p=this.result.geometry.coordinates.at(-1); L.circleMarker([p[1],p[0]],{radius:8,color:'#dc2626',fillOpacity:1}).bindTooltip('จุดสิ้นสุดตามระยะ').addTo(this.layer); }
+                },
+                async calculate() {
+                    this.invalidate(); this.picking=false; document.getElementById('map').style.cursor='';
+                    const meters=Number(document.getElementById('rmLength').value), mode=document.getElementById('rmMode').value;
+                    if(!Number.isFinite(meters)||meters<1||meters>100000)return this.status('กรอกระยะ 1–100,000 เมตร');
+                    if(this.points.length<2)return this.status('เลือกจุดเริ่มต้นและจุดกำหนดทิศทางอย่างน้อย 2 จุด');
+                    if(typeof turf==='undefined')return this.status('เครื่องมือคำนวณยังโหลดไม่สำเร็จ กรุณาเปิดใหม่เมื่อมีอินเทอร์เน็ต');
+                    const revision=this.revision, points=this.points.map(p=>[...p]);
+                    this.controller=new AbortController(); const controller=this.controller; const timeout=setTimeout(()=>controller.abort(),20000);
+                    this.status('กำลังคำนวณแนวถนน…');
+                    try {
+                        let line;
+                        if(mode==='manual')line=turf.lineString(points);
+                        else {
+                            const response=await fetch(`https://router.project-osrm.org/route/v1/driving/${points.map(p=>p.join(',')).join(';')}?overview=full&geometries=geojson&alternatives=false&radiuses=${points.map(()=>50).join(';')}`,{signal:controller.signal});
+                            if(!response.ok)throw new Error('บริการหาเส้นทางไม่พร้อม หรือจุดที่เลือกห่างจากถนนเกิน 50 เมตร');
+                            const data=await response.json();
+                            if(data.code!=='Ok'||!data.routes?.[0]?.geometry)throw new Error('ไม่พบถนนเชื่อมต่อกัน กรุณาปรับจุดผ่านหรือใช้โหมดวาดเอง');
+                            line=turf.feature(data.routes[0].geometry);
+                        }
+                        if(revision!==this.revision||!this.active)return;
+                        const length=turf.length(line,{units:'meters'});
+                        if(length<meters)throw new Error(`แนวที่เลือกยาว ${length.toFixed(2)} เมตร ยังไม่ถึง ${meters} เมตร กรุณาเพิ่มจุดต่อไปตามถนน`);
+                        this.result=turf.lineSliceAlong(line,0,meters,{units:'meters'});
+                        this.result.properties={alignmentMethod:mode==='road'?'osrm':'manual',requestedLengthMeters:meters,measuredLengthMeters:turf.length(this.result,{units:'meters'}),createdAt:new Date().toISOString()};
+                        this.draw(); App.state.map.fitBounds(this.layer.getBounds(),{paddingTopLeft:[30,30],paddingBottomRight:[400,40],maxZoom:17});
+                        const coords=this.result.geometry.coordinates, first=coords[0], last=coords.at(-1);
+                        this.status(`ได้แนว ${this.result.properties.measuredLengthMeters.toFixed(2)} เมตร | เริ่ม ${first[1].toFixed(6)}, ${first[0].toFixed(6)} | สิ้นสุด ${last[1].toFixed(6)}, ${last[0].toFixed(6)} — ตรวจแนวแล้วทำเครื่องหมายยืนยัน`);
+                    } catch(error) { if(revision===this.revision&&this.active)this.status(error.name==='AbortError'?'บริการใช้เวลานานเกินไป กรุณาลองใหม่':error.message); }
+                    finally { clearTimeout(timeout); }
+                },
+                use() {
+                    if(!this.result||!document.getElementById('rmReviewed').checked)return;
+                    if(!window.confirm('เปิดฟอร์มโครงการใหม่ด้วยแนวนี้? ข้อมูลในฟอร์มเดิมที่ยังไม่บันทึกจะถูกล้าง'))return;
+                    const geo=JSON.parse(JSON.stringify(this.result)); this.close(); App.features.clearForm(); App.state.currentGeoJSON=geo; App.state.currentRoutes=[];
+                    document.getElementById('btnAltRoute').classList.add('hidden');
+                    const c=geo.geometry.coordinates, start=c[0], end=c.at(-1);
+                    [['startLatInput',start[1]],['startLngInput',start[0]],['endLatInput',end[1]],['endLngInput',end[0]]].forEach(([id,value])=>document.getElementById(id).value=value.toFixed(7));
+                    App.features.updateMapFromInput(); L.geoJSON(geo,{style:{color:'#3b82f6',weight:5}}).addTo(App.state.previewLayer); App.features.updateDistanceDisplay(geo); App.ui.openModal('proposalModal');
+                    App.ui.showToast('นำแนวเข้าฟอร์มแล้ว กรุณากรอกชื่อโครงการและกดบันทึก','success');
+                }
+            },
+            spatial: {
+                layerLabels: { slope:'ความลาดชัน', flood:'น้ำท่วมซ้ำซาก', community:'ชุมชน/ประชากร', road:'โครงข่ายถนน', facility:'สถานที่สำคัญ' },
+                statusIds: { slope:'spatialStatusSlope', flood:'spatialStatusFlood', community:'spatialStatusCommunity', road:'spatialStatusRoad', facility:'spatialStatusFacility' },
+                open() {
+                    if(typeof turf === 'undefined') return App.ui.showToast('ไม่สามารถโหลดเครื่องมือวิเคราะห์เชิงพื้นที่ได้ กรุณาตรวจสอบอินเทอร์เน็ต', 'error');
+                    const filter = document.getElementById('spatialDistrictFilter');
+                    if(filter && filter.options.length === 1) Object.keys(ORG_DATA).forEach(d => filter.innerHTML += `<option value="${App.ui.escapeHtml(d)}">${App.ui.escapeHtml(d)}</option>`);
+                    this.loadWeights();
+                    this.updateLayerStatuses();
+                    this.updateWeightTotal();
+                    ['weightSlope','weightFlood','weightCommunity','weightRoad','weightFacility'].forEach(id => {
+                        const el=document.getElementById(id); if(el && !el.dataset.bound){el.addEventListener('input',()=>this.updateWeightTotal());el.dataset.bound='1';}
+                    });
+                    if(App.state.spatialResults.length) this.renderResults();
+                    App.ui.openModal('spatialAnalysisModal');
+                },
+                weights() {
+                    return {
+                        slope:Math.max(0,parseFloat(document.getElementById('weightSlope')?.value)||0),
+                        flood:Math.max(0,parseFloat(document.getElementById('weightFlood')?.value)||0),
+                        community:Math.max(0,parseFloat(document.getElementById('weightCommunity')?.value)||0),
+                        road:Math.max(0,parseFloat(document.getElementById('weightRoad')?.value)||0),
+                        facility:Math.max(0,parseFloat(document.getElementById('weightFacility')?.value)||0)
+                    };
+                },
+                updateWeightTotal() {
+                    const total=Object.values(this.weights()).reduce((a,b)=>a+b,0); const el=document.getElementById('spatialWeightTotal');
+                    if(el){el.innerText=`รวมน้ำหนัก ${total}%`;el.className=`text-xs font-bold ${total===100?'text-emerald-700':'text-orange-600'}`;}
+                },
+                loadWeights() {
+                    try {
+                        const saved=JSON.parse(localStorage.getItem('spatialAnalysisSettings')||'null'); if(!saved)return;
+                        const map={slope:'weightSlope',flood:'weightFlood',community:'weightCommunity',road:'weightRoad',facility:'weightFacility'};
+                        Object.entries(map).forEach(([k,id])=>{if(saved.weights?.[k]!==undefined)document.getElementById(id).value=saved.weights[k];});
+                        if(saved.bufferMeters)document.getElementById('spatialBufferMeters').value=saved.bufferMeters;
+                    } catch(e) {}
+                },
+                saveSettings() {
+                    try { localStorage.setItem('spatialAnalysisSettings',JSON.stringify({weights:this.weights(),bufferMeters:parseFloat(document.getElementById('spatialBufferMeters').value)||500})); } catch(e) {}
+                },
+                normalizeGeoJSON(data) {
+                    if(!data) throw new Error('ไฟล์ไม่มีข้อมูล');
+                    if(data.type==='FeatureCollection') return data;
+                    if(data.type==='Feature') return turf.featureCollection([data]);
+                    if(data.type && data.coordinates) return turf.featureCollection([turf.feature(data)]);
+                    throw new Error('รูปแบบชั้นข้อมูลไม่ถูกต้อง');
+                },
+                async importLayer(type,input) {
+                    const file=input?.files?.[0]; if(!file)return;
+                    try {
+                        const text=await file.text(); let data;
+                        if(file.name.toLowerCase().endsWith('.kml')) {
+                            const xml=new DOMParser().parseFromString(text,'text/xml');
+                            if(xml.querySelector('parsererror')) throw new Error('ไฟล์ KML ไม่สมบูรณ์');
+                            data=toGeoJSON.kml(xml);
+                        } else data=JSON.parse(text);
+                        const fc=this.normalizeGeoJSON(data);
+                        if(!fc.features.length) throw new Error('ไม่พบวัตถุภูมิศาสตร์ในไฟล์');
+                        App.state.spatialLayers[type]=fc; App.state.spatialLayerNames[type]=file.name;
+                        this.updateLayerStatuses(); this.renderImportedLayers();
+                        this.showLayerMessage(`นำเข้า “${this.layerLabels[type]}” จำนวน ${fc.features.length.toLocaleString()} รายการแล้ว`,'success');
+                        App.ui.showToast(`นำเข้าชั้นข้อมูล ${this.layerLabels[type]} สำเร็จ`,'success');
+                    } catch(e) {
+                        console.error('Spatial import error',e); this.showLayerMessage(`นำเข้าไม่สำเร็จ: ${e.message}`,'error'); App.ui.showToast(`นำเข้าชั้นข้อมูลไม่สำเร็จ: ${e.message}`,'error');
+                    } finally { if(input)input.value=''; }
+                },
+                showLayerMessage(message,type) {
+                    const el=document.getElementById('spatialLayerMessage');if(!el)return;el.classList.remove('hidden');el.innerText=message;
+                    el.className=`mt-3 text-xs rounded-lg p-2.5 border ${type==='success'?'bg-emerald-50 text-emerald-700 border-emerald-200':'bg-red-50 text-red-700 border-red-200'}`;
+                },
+                updateLayerStatuses() {
+                    Object.keys(this.layerLabels).forEach(type=>{const el=document.getElementById(this.statusIds[type]);if(!el)return;const fc=App.state.spatialLayers[type];el.innerText=fc?`${fc.features.length.toLocaleString()} รายการ`:'ยังไม่มีข้อมูล';el.className=fc?'text-emerald-700 font-bold':'text-gray-400';});
+                },
+                clearLayers() {
+                    if(!window.confirm('ล้างชั้นข้อมูลกายภาพที่นำเข้าในรอบนี้หรือไม่?\nข้อมูลโครงการเดิมจะไม่ถูกลบ'))return;
+                    Object.keys(App.state.spatialLayers).forEach(k=>App.state.spatialLayers[k]=null);App.state.spatialLayerNames={};App.state.spatialResults=[];
+                    App.state.spatialDisplayLayer?.clearLayers();App.state.spatialHighlightLayer?.clearLayers();this.updateLayerStatuses();this.renderResults();
+                    this.showLayerMessage('ล้างเฉพาะชั้นข้อมูลวิเคราะห์แล้ว ข้อมูลโครงการเดิมยังอยู่','success');
+                },
+                renderImportedLayers() {
+                    const group=App.state.spatialDisplayLayer;if(!group)return;group.clearLayers();
+                    const styles={slope:{color:'#d97706',weight:1,fillOpacity:.12},flood:{color:'#0284c7',weight:1,fillOpacity:.18},community:{color:'#7c3aed',weight:1,fillOpacity:.16},road:{color:'#475569',weight:2,opacity:.65},facility:{color:'#e11d48',weight:1,fillOpacity:.8}};
+                    Object.entries(App.state.spatialLayers).forEach(([type,fc])=>{if(!fc)return;try{L.geoJSON(fc,{style:()=>styles[type],pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:type==='facility'?5:4,...styles[type]}),onEachFeature:(f,l)=>l.bindTooltip(this.layerLabels[type])}).addTo(group);}catch(e){console.warn(e);}});
+                },
+                projectLine(project) {
+                    try {
+                        let raw=project.geoJSON? (typeof project.geoJSON==='string'?JSON.parse(project.geoJSON):project.geoJSON):null; const lines=[];
+                        const collect=g=>{if(!g)return;if(g.type==='LineString')lines.push(turf.lineString(g.coordinates));else if(g.type==='MultiLineString')g.coordinates.forEach(c=>lines.push(turf.lineString(c)));};
+                        if(raw?.type==='FeatureCollection')raw.features.forEach(f=>collect(f.geometry));else if(raw?.type==='Feature')collect(raw.geometry);else collect(raw);
+                        if(lines.length) return lines.sort((a,b)=>turf.length(b)-turf.length(a))[0];
+                        const c=project.coordinates;if(c?.startLat&&c?.startLng&&c?.endLat&&c?.endLng)return turf.lineString([[+c.startLng,+c.startLat],[+c.endLng,+c.endLat]]);
+                    } catch(e) { console.warn('Project geometry error',project.id,e); }
+                    return null;
+                },
+                numericProperty(feature,names) {
+                    const props=feature?.properties||{};const lookup=Object.fromEntries(Object.entries(props).map(([k,v])=>[String(k).toLowerCase().replace(/[_\s-]/g,''),v]));
+                    for(const name of names){const v=lookup[name.toLowerCase().replace(/[_\s-]/g,'')];const n=parseFloat(String(v??'').replace(/,/g,''));if(Number.isFinite(n))return n;}return null;
+                },
+                featureTouchesArea(feature,area) {
+                    try { const g=feature?.geometry;if(!g)return false;if(g.type==='Point')return turf.booleanPointInPolygon(feature,area);return turf.booleanIntersects(feature,area); } catch(e) { return false; }
+                },
+                scoreProject(project,weights,bufferMeters) {
+                    const line=this.projectLine(project);if(!line)return {project,noGeometry:true,score:null,grade:'-',confidence:0,factors:{}};
+                    const area=turf.buffer(line,bufferMeters/1000,{units:'kilometers'});const factors={};
+
+                    const slopeLayer=App.state.spatialLayers.slope;
+                    if(slopeLayer){const vals=slopeLayer.features.filter(f=>this.featureTouchesArea(f,area)).map(f=>this.numericProperty(f,['slope_pct','slope','mean_slope','avg_slope','value'])).filter(Number.isFinite);if(vals.length){const avg=vals.reduce((a,b)=>a+b,0)/vals.length;const score=avg<=3?5:avg<=6?4:avg<=12?3:avg<=20?2:1;factors.slope={available:true,score,value:`${avg.toFixed(1)}%`,detail:`ความลาดชันเฉลี่ยจาก ${vals.length} พื้นที่`};}else factors.slope={available:false,score:null,value:'ไม่มีข้อมูลครอบคลุม',detail:'ชั้นความลาดชันไม่ครอบคลุมแนวโครงการ'};}else factors.slope={available:false,score:null,value:'ยังไม่มีชั้นข้อมูล',detail:'ยังไม่ได้นำเข้าชั้นความลาดชัน'};
+
+                    const floodLayer=App.state.spatialLayers.flood;
+                    if(floodLayer){const floodPolys=floodLayer.features.filter(f=>['Polygon','MultiPolygon'].includes(f.geometry?.type));const samples=40;let hit=0;const len=turf.length(line);for(let i=0;i<=samples;i++){const pt=turf.along(line,len*i/samples);if(floodPolys.some(poly=>{try{return turf.booleanPointInPolygon(pt,poly);}catch(e){return false;}}))hit++;}const pct=hit/(samples+1)*100;const score=pct===0?5:pct<=10?4:pct<=30?3:pct<=60?2:1;factors.flood={available:true,score,value:`${pct.toFixed(1)}%`,detail:'สัดส่วนแนวโครงการที่อยู่ในพื้นที่น้ำท่วม'};}else factors.flood={available:false,score:null,value:'ยังไม่มีชั้นข้อมูล',detail:'ยังไม่ได้นำเข้าชั้นน้ำท่วม'};
+
+                    const communityLayer=App.state.spatialLayers.community;
+                    if(communityLayer){const nearby=communityLayer.features.filter(f=>this.featureTouchesArea(f,area));let population=0,hasPopulation=false;nearby.forEach(f=>{const n=this.numericProperty(f,['population','pop','people','ประชากร','households','household']);if(Number.isFinite(n)){population+=n;hasPopulation=true;}});const metric=hasPopulation?population:nearby.length;const score=metric>=2000?5:metric>=1000?4:metric>=500?3:metric>=100?2:metric>0?1:1;factors.community={available:true,score,value:hasPopulation?`${population.toLocaleString()} คน/ครัวเรือน`:`${nearby.length} พื้นที่/จุด`,detail:`ภายในรัศมี ${bufferMeters.toLocaleString()} เมตร`};}else factors.community={available:false,score:null,value:'ยังไม่มีชั้นข้อมูล',detail:'ยังไม่ได้นำเข้าชั้นชุมชน'};
+
+                    const roadLayer=App.state.spatialLayers.road;
+                    if(roadLayer){const roads=[];roadLayer.features.forEach(f=>{const g=f.geometry;if(g?.type==='LineString')roads.push(f);else if(g?.type==='MultiLineString')g.coordinates.forEach(c=>roads.push(turf.lineString(c,f.properties)));});const coords=line.geometry.coordinates;const ends=[turf.point(coords[0]),turf.point(coords[coords.length-1])];let connected=0;ends.forEach(pt=>{let min=Infinity;roads.forEach(r=>{try{const snap=turf.nearestPointOnLine(r,pt,{units:'kilometers'});min=Math.min(min,snap.properties.dist);}catch(e){}});if(min<=0.05)connected++;});let intersections=0;roads.forEach(r=>{try{intersections+=turf.lineIntersect(line,r).features.length;}catch(e){}});const score=connected===2&&intersections>=3?5:connected===2?4:connected===1&&intersections>0?3:connected===1?2:1;factors.road={available:true,score,value:`เชื่อม ${connected}/2 จุด`,detail:`พบจุดตัดโครงข่าย ${intersections} จุด (เกณฑ์ระยะเชื่อม 50 ม.)`};}else factors.road={available:false,score:null,value:'ยังไม่มีชั้นข้อมูล',detail:'ยังไม่ได้นำเข้าชั้นถนน'};
+
+                    const facilityLayer=App.state.spatialLayers.facility;
+                    if(facilityLayer){const count=facilityLayer.features.filter(f=>this.featureTouchesArea(f,area)).length;const score=count>=5?5:count===4?4:count===3?3:count>=1?2:1;factors.facility={available:true,score,value:`${count} แห่ง`,detail:`สถานที่สำคัญในรัศมี ${bufferMeters.toLocaleString()} เมตร`};}else factors.facility={available:false,score:null,value:'ยังไม่มีชั้นข้อมูล',detail:'ยังไม่ได้นำเข้าชั้นสถานที่สำคัญ'};
+
+                    const totalWeight=Object.values(weights).reduce((a,b)=>a+b,0);let availableWeight=0,weighted=0;
+                    Object.entries(factors).forEach(([key,f])=>{if(f.available&&weights[key]>0){availableWeight+=weights[key];weighted+=(f.score/5)*weights[key];}});
+                    const score=availableWeight?weighted/availableWeight*100:null;const confidence=totalWeight?availableWeight/totalWeight*100:0;const grade=score===null?'-':score>=80?'A':score>=65?'B':score>=50?'C':'D';
+                    return {project,line,area,noGeometry:false,score,grade,confidence,factors};
+                },
+                run() {
+                    const weights=this.weights();const total=Object.values(weights).reduce((a,b)=>a+b,0);if(total<=0)return App.ui.showToast('กรุณากำหนดน้ำหนักอย่างน้อย 1 ปัจจัย','error');
+                    const bufferMeters=Math.max(50,parseFloat(document.getElementById('spatialBufferMeters').value)||500);this.saveSettings();
+                    const projects=App.state.proposals.filter(p=>p.projectType!=='ordinance');App.state.spatialResults=projects.map(p=>this.scoreProject(p,weights,bufferMeters)).sort((a,b)=>(b.score??-1)-(a.score??-1));
+                    this.renderResults();App.ui.showToast(`วิเคราะห์โครงการ ${projects.length} รายการเรียบร้อยแล้ว`,'success');
+                },
+                factorCell(f) { return f?.available?`<span class="font-bold text-gray-800">${f.score}/5</span><div class="text-[9px] text-gray-500 max-w-[90px] truncate" title="${App.ui.escapeHtml(f.value)}">${App.ui.escapeHtml(f.value)}</div>`:'<span class="text-gray-400">N/A</span>'; },
+                renderResults() {
+                    const body=document.getElementById('spatialResultBody');if(!body)return;const district=document.getElementById('spatialDistrictFilter')?.value||'';const all=App.state.spatialResults;const items=all.filter(r=>!district||r.project.district===district);
+                    document.getElementById('spatialProjectCount').innerText=all.length;document.getElementById('spatialNoGeometryCount').innerText=all.filter(r=>r.noGeometry).length;
+                    document.getElementById('spatialGradeACount').innerText=all.filter(r=>r.grade==='A').length;document.getElementById('spatialConfidenceAverage').innerText=all.length?`${Math.round(all.reduce((s,r)=>s+r.confidence,0)/all.length)}%`:'0%';
+                    if(!items.length){body.innerHTML='<tr><td colspan="11" class="p-10 text-center text-gray-400">ยังไม่มีผลการวิเคราะห์</td></tr>';return;}
+                    const gradeClass={A:'bg-emerald-100 text-emerald-800',B:'bg-blue-100 text-blue-800',C:'bg-amber-100 text-amber-800',D:'bg-red-100 text-red-800','-':'bg-gray-100 text-gray-500'};
+                    body.innerHTML=items.map((r,i)=>`<tr class="border-b hover:bg-teal-50"><td class="p-3 text-center font-bold text-teal-700">${r.score===null?'-':i+1}</td><td class="p-3 max-w-[280px]"><div class="font-bold text-gray-800 whitespace-normal">${App.ui.escapeHtml(App.ui.getProjectName(r.project)||'ไม่มีชื่อโครงการ')}</div><div class="text-[10px] text-gray-500">อ.${App.ui.escapeHtml(r.project.district||'-')} · ${App.ui.escapeHtml(r.project.agencyName||'-')}</div></td><td class="p-3 text-center"><span class="text-lg font-bold ${r.score===null?'text-gray-400':'text-teal-700'}">${r.score===null?'N/A':r.score.toFixed(1)}</span></td><td class="p-3 text-center"><span class="px-2 py-1 rounded-full font-bold ${gradeClass[r.grade]}">${r.grade}</span></td><td class="p-3 text-center"><div class="font-bold">${Math.round(r.confidence)}%</div><div class="w-16 h-1.5 bg-gray-200 rounded mx-auto mt-1"><div class="h-full bg-blue-500 rounded" style="width:${Math.min(100,r.confidence)}%"></div></div></td><td class="p-3 text-center">${this.factorCell(r.factors.slope)}</td><td class="p-3 text-center">${this.factorCell(r.factors.flood)}</td><td class="p-3 text-center">${this.factorCell(r.factors.community)}</td><td class="p-3 text-center">${this.factorCell(r.factors.road)}</td><td class="p-3 text-center">${this.factorCell(r.factors.facility)}</td><td class="p-3 text-center whitespace-nowrap"><button onclick="App.spatial.showDetail('${r.project.id}')" class="bg-teal-100 text-teal-800 px-2 py-1.5 rounded font-bold mr-1"><i class="fa-solid fa-list-check"></i></button><button onclick="App.spatial.showOnMap('${r.project.id}')" ${r.noGeometry?'disabled':''} class="bg-indigo-100 text-indigo-700 px-2 py-1.5 rounded font-bold disabled:opacity-30"><i class="fa-solid fa-map-location-dot"></i></button></td></tr>`).join('');
+                },
+                showDetail(id) {
+                    const r=App.state.spatialResults.find(x=>x.project.id===id);if(!r)return;const panel=document.getElementById('spatialDetailPanel');const labels=this.layerLabels;
+                    const cards=Object.entries(labels).map(([key,label])=>{const f=r.factors[key];return `<div class="border rounded-lg p-3 ${f?.available?'bg-white':'bg-gray-50'}"><div class="flex justify-between"><span class="font-bold text-xs">${label}</span><span class="font-bold ${f?.available?'text-teal-700':'text-gray-400'}">${f?.available?f.score+'/5':'N/A'}</span></div><div class="text-xs mt-1 text-gray-700">${App.ui.escapeHtml(f?.value||'ไม่มีข้อมูล')}</div><div class="text-[10px] mt-1 text-gray-500">${App.ui.escapeHtml(f?.detail||'')}</div></div>`;}).join('');
+                    panel.innerHTML=`<div class="flex justify-between items-start mb-3"><div><h4 class="font-bold text-teal-800">${App.ui.escapeHtml(App.ui.getProjectName(r.project)||'ไม่มีชื่อโครงการ')}</h4><p class="text-xs text-gray-500">อ.${App.ui.escapeHtml(r.project.district||'-')} · คะแนน ${r.score===null?'N/A':r.score.toFixed(1)} · ระดับ ${r.grade} · ข้อมูลครบ ${Math.round(r.confidence)}%</p></div><button onclick="document.getElementById('spatialDetailPanel').classList.add('hidden')" class="text-gray-400"><i class="fa-solid fa-xmark"></i></button></div><div class="grid grid-cols-1 md:grid-cols-5 gap-2">${cards}</div>`;panel.classList.remove('hidden');panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+                },
+                showOnMap(id) {
+                    const r=App.state.spatialResults.find(x=>x.project.id===id);if(!r?.line)return App.ui.showToast('โครงการนี้ยังไม่มีแนวเส้นหรือพิกัดต้น-ปลาย','error');
+                    const group=App.state.spatialHighlightLayer;group.clearLayers();const areaLayer=L.geoJSON(r.area,{style:{color:'#0f766e',weight:1,fillColor:'#14b8a6',fillOpacity:.12,dashArray:'6,5'}}).addTo(group);L.geoJSON(r.line,{style:{color:'#dc2626',weight:7,opacity:.9}}).addTo(group);App.ui.closeModal('spatialAnalysisModal');App.state.map.fitBounds(areaLayer.getBounds(),{padding:[40,40]});App.ui.showToast('แสดงแนวโครงการและพื้นที่วิเคราะห์บนแผนที่แล้ว','info');
                 }
             },
 
@@ -770,7 +1237,7 @@
                     const agc = document.getElementById('agencyName').value;
                     if (dist && agc) {
                         let max = 0;
-                        App.state.proposals.forEach(p => {
+                        App.state.proposals.filter(p => p.projectType !== 'ordinance').forEach(p => {
                             if (p.district === dist && p.agencyName === agc) {
                                 const n = parseInt(p.seqNo) || 0;
                                 if (n > max) max = n;
@@ -838,7 +1305,7 @@
                     let nextSeq = 1;
                     if (currentDistrict && currentAgency) {
                         let max = 0;
-                        App.state.proposals.forEach(p => {
+                        App.state.proposals.filter(p => p.projectType !== 'ordinance').forEach(p => {
                             if (p.district === currentDistrict && p.agencyName === currentAgency) {
                                 const n = parseInt(p.seqNo) || 0;
                                 if (n > max) max = n;
@@ -990,12 +1457,12 @@
                         attHtml += '</div></div>';
                     }
 
-                    document.getElementById('detailContent').innerHTML = `${warn}<div class="grid grid-cols-2 gap-3 text-sm"><div class="col-span-2 border-b pb-2 mb-2 flex justify-between items-center"><span class="font-bold">สถานะ:</span> <span class="bg-amber-100 px-2 py-1 rounded font-bold">${p.status||'รอพิจารณา'}</span> <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-bold">ลำดับที่ ${p.seqNo||1}</span></div><div><span class="text-gray-500 block text-xs">อำเภอ</span><div class="font-bold">${p.district||'-'}</div></div><div><span class="text-gray-500 block text-xs">หน่วยงานที่ขอ</span><div class="font-bold">${p.agencyName||'-'}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">ชื่อโครงการ (ขอเปลี่ยนแปลง)</span><div class="font-medium">${p.projectNameNew||p.projectNameOld||'-'}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">รายละเอียดโครงการ</span><div>${p.projectDetails||'-'}</div>${distCompareHtml}</div><div class="col-span-2 bg-sky-50 p-3 rounded flex justify-between mt-2"><span class="font-bold text-sky-800 text-xs"><i class="fa-solid fa-ruler mr-2"></i>ระยะทางบนแผนที่:</span><span class="font-bold text-sky-700">${d>0?d.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' เมตร':'-'}</span></div>${attHtml}</div>`;
+                    document.getElementById('detailContent').innerHTML = `${warn}<div class="grid grid-cols-2 gap-3 text-sm"><div class="col-span-2 border-b pb-2 mb-2 flex justify-between items-center"><span class="font-bold">สถานะ:</span> <span class="bg-amber-100 px-2 py-1 rounded font-bold">${p.status||'รอพิจารณา'}</span> <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-bold">ลำดับที่ ${p.seqNo||1}</span></div><div><span class="text-gray-500 block text-xs">อำเภอ</span><div class="font-bold">${p.district||'-'}</div></div><div><span class="text-gray-500 block text-xs">หน่วยงานที่ขอ</span><div class="font-bold">${p.agencyName||'-'}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">ชื่อโครงการ</span><div class="font-medium">${App.ui.escapeHtml(App.ui.getProjectName(p)||'-')}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">รายละเอียดโครงการ</span><div>${p.projectDetails||'-'}</div>${distCompareHtml}</div><div class="col-span-2 bg-sky-50 p-3 rounded flex justify-between mt-2"><span class="font-bold text-sky-800 text-xs"><i class="fa-solid fa-ruler mr-2"></i>ระยะทางบนแผนที่:</span><span class="font-bold text-sky-700">${d>0?d.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' เมตร':'-'}</span></div>${attHtml}</div>`;
                     document.getElementById('btnEditProposal').onclick = () => { App.ui.closeModal('detailModal'); App.features.editProject(id); }; App.ui.openModal('detailModal');
                 },
                 editProject(id) {
                     const p = App.state.proposals.find(x => x.id === id); if(!p) return; this.clearForm(); App.state.editingId = id;
-                    document.getElementById('districtInput').value = p.district || ''; App.ui.updateAgencyList(); document.getElementById('seqNo').value = p.seqNo || ''; document.getElementById('agencyName').value = p.agencyName || ''; document.getElementById('projectNameOld').value = p.projectNameOld || ''; document.getElementById('projectNameNew').value = p.projectNameNew || ''; document.getElementById('projectDetails').value = p.projectDetails || '';
+                    document.getElementById('districtInput').value = p.district || ''; App.ui.updateAgencyList(); document.getElementById('seqNo').value = p.seqNo || ''; document.getElementById('agencyName').value = p.agencyName || ''; document.getElementById('projectNameOld').value = String(p.projectNameOld || (!String(p.projectNameNew||'').trim() ? App.ui.getProjectName(p) : '') || '').trim(); document.getElementById('projectNameNew').value = String(p.projectNameNew || '').trim(); document.getElementById('projectDetails').value = p.projectDetails || '';
                     if(p.coordinates) { document.getElementById('startLatInput').value = p.coordinates.startLat || ''; document.getElementById('startLngInput').value = p.coordinates.startLng || ''; document.getElementById('endLatInput').value = p.coordinates.endLat || ''; document.getElementById('endLngInput').value = p.coordinates.endLng || ''; App.features.updateMapFromInput(); }
                     document.getElementById('lineStyle').value = p.lineStyle || 'solid'; document.getElementById('lineColor').value = p.lineColor || '#3b82f6'; document.getElementById('lineWeight').value = p.lineWeight || 5;
                     if(p.budget) { document.getElementById('budget2566').value = p.budget.b2566||''; document.getElementById('budget2567').value = p.budget.b2567||''; document.getElementById('budget2568').value = p.budget.b2568||''; document.getElementById('budget2569').value = p.budget.b2569||''; document.getElementById('budget2570').value = p.budget.b2570||''; }
@@ -1017,7 +1484,7 @@
                         return;
                     }
 
-                    let agencyProposals = App.state.proposals.filter(p => p.district === currentDistrict && p.agencyName === currentAgency);
+                    let agencyProposals = App.state.proposals.filter(p => p.projectType !== 'ordinance' && p.district === currentDistrict && p.agencyName === currentAgency);
                     
                     agencyProposals.sort((a, b) => {
                         const numA = parseInt(a.seqNo) || 1;
@@ -1094,14 +1561,188 @@
                         }
                     });
 
-                    const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>พิมพ์รายงาน</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet"><style>@page{size:landscape;margin:10mm;}body{font-family:'Sarabun',sans-serif;font-size:12px;}table{width:100%;border-collapse:collapse;margin-top:15px;table-layout:fixed;}th,td{border:1px solid #000;padding:5px;vertical-align:top;}th{text-align:center;font-weight:bold;background-color:#e2e8f0;}h2,h3{text-align:center;margin:5px;}h2{font-size:18px;}h3{font-size:16px;}.sig-box{float:right;margin-top:40px;margin-right:40px;font-size:12px;}.sig-row{display:flex;align-items:flex-end;margin-bottom:8px;justify-content:flex-end;}.sig-label{text-align:right;margin-right:10px;width:80px;}.sig-dot{text-align:center;min-width:200px;border-bottom:1px dotted #000;}</style></head><body onload="setTimeout(()=>window.print(), 800)"><h2>แบบสรุปรายละเอียดโครงการที่เสนอขอประสานแผน</h2><h3>องค์การบริหารส่วนจังหวัดพิษณุโลก</h3><table><thead><tr><th rowspan="2" style="width: 4%;">ลำดับที่</th><th rowspan="2" style="width: 12%;">ชื่อหน่วยงาน<br>ที่ขอประสาน</th><th colspan="2" style="width: 28%;">ชื่อโครงการ</th><th rowspan="2" style="width: 16%;">รายละเอียดโครงการ</th><th colspan="5" style="width: 20%;">งบประมาณที่เสนอขอ (บาท)</th><th rowspan="2" style="width: 20%;">ผลการตรวจสอบพื้นที่</th></tr><tr><th>(ชื่อเดิม ของ อปท.)</th><th>(ชื่อที่ขอเปลี่ยนแปลง)</th><th>2566</th><th>2567</th><th>2568</th><th>2569</th><th>2570</th></tr></thead><tbody>${rowsHtml}</tbody></table><div class="sig-box"><div class="sig-row"><div class="sig-label">ลงชื่อ</div><div class="sig-dot"></div><div>ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label"></div><div class="sig-dot" style="border-bottom:none">(${iName})</div><div style="color:transparent">ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label">ตำแหน่ง</div><div class="sig-dot" style="border-bottom:none">${iPos}</div><div style="color:transparent">ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label">วันที่ตรวจสอบ</div><div class="sig-dot">......... / ......... / .............</div><div style="color:transparent">ผู้ตรวจสอบพื้นที่</div></div></div>${projectImageSections}</body></html>`;
+                    const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>พิมพ์รายงาน</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet"><style>@page{size:A4 landscape;margin:10mm;}html{background:#e5e7eb;}body{box-sizing:border-box;width:277mm;margin:10mm auto;background:white;font-family:'Sarabun',sans-serif;font-size:12px;}table{width:100%;border-collapse:collapse;margin-top:15px;table-layout:fixed;}th,td{border:1px solid #000;padding:4px 3px;vertical-align:top;overflow-wrap:anywhere;}th{text-align:center;font-weight:bold;background-color:#e2e8f0;}h2,h3{text-align:center;margin:5px;}h2{font-size:18px;}h3{font-size:16px;}.sig-box{float:right;margin-top:40px;margin-right:40px;font-size:12px;}.sig-row{display:flex;align-items:flex-end;margin-bottom:8px;justify-content:flex-end;}.sig-label{text-align:right;margin-right:10px;width:80px;}.sig-dot{text-align:center;min-width:200px;border-bottom:1px dotted #000;}thead{display:table-header-group;}tr{break-inside:avoid;page-break-inside:avoid;}tbody td:nth-child(n+6):nth-child(-n+10){font-family:Arial,sans-serif;font-size:10px;font-variant-numeric:tabular-nums;text-align:right;overflow-wrap:anywhere;} .sig-box{break-inside:avoid;page-break-inside:avoid;}@media print{html{background:white;}body{width:277mm;margin:0;}th{print-color-adjust:exact;-webkit-print-color-adjust:exact;}}</style></head><body onload="prepareReportPrint()"><h2>แบบสรุปรายละเอียดโครงการที่เสนอขอประสานแผน</h2><h3>องค์การบริหารส่วนจังหวัดพิษณุโลก</h3><table><colgroup><col style="width:9mm"><col style="width:25mm"><col style="width:36mm"><col style="width:30mm"><col style="width:39mm"><col span="5" style="width:18mm"><col style="width:48mm"></colgroup><thead><tr><th rowspan="2">ลำดับที่</th><th rowspan="2">ชื่อหน่วยงาน<br>ที่ขอประสาน</th><th colspan="2">ชื่อโครงการ</th><th rowspan="2">รายละเอียดโครงการ</th><th colspan="5">งบประมาณที่เสนอขอ (บาท)</th><th rowspan="2">ผลการตรวจสอบพื้นที่</th></tr><tr><th>(ชื่อเดิม ของ อปท.)</th><th>(ชื่อที่ขอเปลี่ยนแปลง)</th><th>2566</th><th>2567</th><th>2568</th><th>2569</th><th>2570</th></tr></thead><tbody>${rowsHtml}</tbody></table><div class="sig-box"><div class="sig-row"><div class="sig-label">ลงชื่อ</div><div class="sig-dot"></div><div>ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label"></div><div class="sig-dot" style="border-bottom:none">(${iName})</div><div style="color:transparent">ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label">ตำแหน่ง</div><div class="sig-dot" style="border-bottom:none">${iPos}</div><div style="color:transparent">ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label">วันที่ตรวจสอบ</div><div class="sig-dot">......... / ......... / .............</div><div style="color:transparent">ผู้ตรวจสอบพื้นที่</div></div></div>${projectImageSections}<script>function fitReportAmounts(){document.querySelectorAll("tbody td:nth-child(n+6):nth-child(-n+10)").forEach(function(cell){cell.style.fontSize="10px";cell.style.whiteSpace="nowrap";var size=10;while(cell.scrollWidth>cell.clientWidth && size>8){size-=0.25;cell.style.fontSize=size+"px";}if(cell.scrollWidth>cell.clientWidth)cell.style.whiteSpace="normal";});}async function prepareReportPrint(){if(document.fonts)await document.fonts.ready;await Promise.all(Array.from(document.images).map(function(img){if(img.complete)return Promise.resolve();return new Promise(function(resolve){img.addEventListener("load",resolve,{once:true});img.addEventListener("error",resolve,{once:true});setTimeout(resolve,5000);});}));fitReportAmounts();requestAnimationFrame(function(){requestAnimationFrame(function(){window.print();});});}window.addEventListener("beforeprint",fitReportAmounts);<\/script></body></html>`;
                     const w = window.open('','_blank'); w.document.write(html); w.document.close();
                 },
                 openAnalyze() { App.ui.openModal('analyzeModal'); },
+                async openOrdinanceFolder() {
+                    const missingFolders = App.state.proposals.filter(p => p.projectType !== 'ordinance' && !App.ui.findLinkedOrdinance(p) && (p.ordinanceProjectId || App.ui.getWorkflowStatus(p) === 'ยกระดับเป็นโครงการข้อบัญญัติแล้ว'));
+                    for(const project of missingFolders) {
+                        App.state.upgradeTargetId = project.id;
+                        await this.executeUpgrade(false);
+                    }
+                    App.ui.renderOrdinanceTable();
+                    App.ui.openModal('ordinanceModal');
+                },
+                openLinkedOrdinance(id) {
+                    const project = App.state.proposals.find(p => p.id === id && p.projectType === 'ordinance' && p.ordinanceActive !== false);
+                    if(!project) return App.ui.showToast('ไม่พบแฟ้มข้อบัญญัติที่เชื่อมโยง กรุณารอการซิงก์ข้อมูล', 'error');
+                    App.ui.closeModal('analyzeModal');
+                    App.features.openProposalDetail(id);
+                },
+                openSourceCoordination(id) {
+                    const project = App.state.proposals.find(p => p.id === id && p.projectType !== 'ordinance');
+                    if(!project) return App.ui.showToast('ไม่พบโครงการประสานแผนต้นทาง', 'error');
+                    App.ui.closeModal('ordinanceModal');
+                    App.features.openProposalDetail(id);
+                },
+                editOrdinanceProject(id) {
+                    const project = App.state.proposals.find(p => p.id === id && p.projectType === 'ordinance' && p.ordinanceActive !== false);
+                    if(!project) return App.ui.showToast('ไม่พบโครงการข้อบัญญัติที่ต้องการแก้ไข', 'error');
+                    App.ui.closeModal('ordinanceModal');
+                    this.editProject(id);
+                    App.ui.showToast('กำลังแก้ไขข้อมูลในแฟ้มข้อบัญญัติ โดยไม่เปลี่ยนข้อมูลต้นทาง', 'info');
+                },
+                async returnOrdinanceToConsideration(id) {
+                    const ordinance = App.state.proposals.find(p => p.id === id && p.projectType === 'ordinance' && p.ordinanceActive !== false);
+                    if(!ordinance) return App.ui.showToast('ไม่พบโครงการข้อบัญญัติที่ต้องการส่งกลับ', 'error');
+                    const sourceId = ordinance.sourceCoordinationId || String(id).replace(/^ORD_/, '');
+                    const source = App.state.proposals.find(p => p.id === sourceId && p.projectType !== 'ordinance');
+                    if(!source) return App.ui.showToast('ไม่พบโครงการประสานแผนต้นทาง จึงยังส่งกลับไม่ได้', 'error');
+                    const projectName = App.ui.getProjectName(ordinance) || '(ไม่มีชื่อโครงการ)';
+                    if(!window.confirm(`ยืนยันส่งโครงการกลับไปรอพิจารณาข้อบัญญัติหรือไม่?\n\n${projectName}`)) return;
+
+                    const changedAt = new Date().toISOString();
+                    const currentStatus = App.ui.getWorkflowStatus(source);
+                    const sourceHistory = [
+                        ...(Array.isArray(source.workflowHistory) ? source.workflowHistory : []),
+                        { from: currentStatus, to: 'รอพิจารณาข้อบัญญัติ', at: changedAt, action: 'ส่งกลับจากแฟ้มข้อบัญญัติ' }
+                    ];
+                    const sourceUpdate = {
+                        workflowStatus: 'รอพิจารณาข้อบัญญัติ',
+                        coordinationStatus: 'รอพิจารณาข้อบัญญัติ',
+                        ordinanceProjectId: null,
+                        returnedFromOrdinanceAt: changedAt,
+                        workflowUpdatedAt: changedAt,
+                        workflowHistory: sourceHistory
+                    };
+                    const ordinanceHistory = [
+                        ...(Array.isArray(ordinance.ordinanceHistory) ? ordinance.ordinanceHistory : []),
+                        { from: ordinance.ordinanceStatus || 'เตรียมดำเนินการ', to: 'ส่งกลับพิจารณา', at: changedAt }
+                    ];
+                    const ordinanceUpdate = {
+                        ordinanceActive: false,
+                        ordinanceStatus: 'ส่งกลับพิจารณา',
+                        returnedToConsiderationAt: changedAt,
+                        ordinanceHistory
+                    };
+
+                    try {
+                        if(db) {
+                            await setDoc(doc(db, 'artifacts', canvasAppId, 'public', 'data', 'proposals', sourceId), sourceUpdate, { merge: true });
+                            await setDoc(doc(db, 'artifacts', canvasAppId, 'public', 'data', 'proposals', id), ordinanceUpdate, { merge: true });
+                        }
+                        Object.assign(source, sourceUpdate);
+                        Object.assign(ordinance, ordinanceUpdate);
+                        App.db.saveToLocal();
+                        App.ui.renderOrdinanceTable();
+                        App.ui.updateOrdinanceFolderCount();
+                        App.ui.renderAnalyzeTable();
+                        App.ui.renderSearchTable();
+                        App.map.drawMarkers();
+                        App.ui.showToast('ส่งโครงการกลับไปรอพิจารณาข้อบัญญัติเรียบร้อยแล้ว', 'success');
+                    } catch(e) {
+                        console.error('Return Ordinance Error:', e);
+                        App.ui.showToast(`ส่งโครงการกลับไม่สำเร็จ: ${e.message}`, 'error');
+                    }
+                },
+                confirmUpgrade(id) {
+                    const p = App.state.proposals.find(x => x.id === id && x.projectType !== 'ordinance');
+                    if(!p) return App.ui.showToast('ไม่พบโครงการประสานแผน', 'error');
+                    const linkedRecord = App.ui.findLinkedOrdinance(p);
+                    if(linkedRecord) return this.openLinkedOrdinance(linkedRecord.id);
+                    const workflowStatus = App.ui.getWorkflowStatus(p);
+                    const isRepair = !!p.ordinanceProjectId || workflowStatus === 'ยกระดับเป็นโครงการข้อบัญญัติแล้ว';
+                    if(workflowStatus !== 'ได้รับคัดเลือกเข้าสู่ข้อบัญญัติ' && !isRepair) return App.ui.showToast('ต้องกำหนดขั้นตอนเป็น “ได้รับคัดเลือกเข้าสู่ข้อบัญญัติ” ก่อน', 'error');
+                    const name = App.ui.escapeHtml(App.ui.getProjectName(p) || '(ยังไม่ได้ระบุชื่อโครงการ)');
+                    const actionText = isRepair ? 'ซ่อมและสร้างแฟ้มข้อบัญญัติที่ขาด' : 'ยืนยันยกระดับโครงการ';
+                    document.getElementById('upgradeConfirmText').innerHTML = `<span class="font-bold text-indigo-700">${actionText}</span><br>โครงการ <b>“${name}”</b><br><span class="text-xs text-gray-500">อ.${App.ui.escapeHtml(p.district||'-')} — ${App.ui.escapeHtml(p.agencyName||'-')}</span>`;
+                    App.state.upgradeTargetId = id;
+                    App.ui.openModal('upgradeConfirmModal');
+                },
+                async executeUpgrade(showFolder = true) {
+                    const sourceId = App.state.upgradeTargetId;
+                    const source = App.state.proposals.find(p => p.id === sourceId && p.projectType !== 'ordinance');
+                    if(!source) return App.ui.showToast('ไม่พบโครงการต้นทาง', 'error');
+                    const existingRecord = App.ui.findLinkedOrdinance(source);
+                    if(existingRecord) {
+                        App.ui.closeModal('upgradeConfirmModal');
+                        App.state.upgradeTargetId = null;
+                        return this.openLinkedOrdinance(existingRecord.id);
+                    }
+                    const currentWorkflowStatus = App.ui.getWorkflowStatus(source);
+                    const isRepair = !!source.ordinanceProjectId || currentWorkflowStatus === 'ยกระดับเป็นโครงการข้อบัญญัติแล้ว';
+                    if(currentWorkflowStatus !== 'ได้รับคัดเลือกเข้าสู่ข้อบัญญัติ' && !isRepair) return App.ui.showToast('ขั้นตอนโครงการยังไม่พร้อมสำหรับการยกระดับ', 'error');
+
+                    const btn = document.getElementById('btnExecuteUpgrade');
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังยกระดับ...';
+                    // ใช้รหัสที่ผูกกับโครงการต้นทางโดยตรง เพื่อป้องกันการสร้างซ้ำแม้กดจากหลายเครื่องพร้อมกัน
+                    const ordinanceId = source.ordinanceProjectId || `ORD_${sourceId}`;
+                    const upgradedAt = new Date().toISOString();
+                    const { id: ignoredId, ordinanceProjectId: ignoredLink, ...sourceData } = source;
+                    const ordinanceData = {
+                        ...sourceData,
+                        projectType: 'ordinance',
+                        ordinanceActive: true,
+                        sourceCoordinationId: sourceId,
+                        ordinanceStatus: 'เตรียมดำเนินการ',
+                        workflowStatus: 'โครงการข้อบัญญัติ',
+                        upgradedAt,
+                        timestamp: upgradedAt
+                    };
+                    const legacyProjectName = App.ui.getProjectName(source);
+                    if(!ordinanceData.projectNameNew && !ordinanceData.projectNameOld && legacyProjectName) ordinanceData.projectNameNew = legacyProjectName;
+                    const previousHistory = Array.isArray(source.workflowHistory) ? source.workflowHistory : [];
+                    const upgradedHistory = currentWorkflowStatus === 'ยกระดับเป็นโครงการข้อบัญญัติแล้ว' ? previousHistory : [
+                        ...previousHistory,
+                        { from: 'ได้รับคัดเลือกเข้าสู่ข้อบัญญัติ', to: 'ยกระดับเป็นโครงการข้อบัญญัติแล้ว', at: upgradedAt }
+                    ];
+                    const sourceUpdate = {
+                        workflowStatus: 'ยกระดับเป็นโครงการข้อบัญญัติแล้ว',
+                        coordinationStatus: 'ยกระดับเป็นโครงการข้อบัญญัติแล้ว',
+                        ordinanceProjectId: ordinanceId,
+                        upgradedAt,
+                        workflowHistory: upgradedHistory
+                    };
+
+                    let upgradeSaveStage = 'สร้างแฟ้มข้อบัญญัติ';
+                    try {
+                        if(db) {
+                            // ใช้วิธี setDoc แบบเดียวกับการบันทึกโครงการเดิม เพื่อให้เข้ากับสิทธิ์ฐานข้อมูลเดิม
+                            // รหัสปลายทางเป็นค่าคงที่ จึงกดซ้ำแล้วอัปเดตแฟ้มเดิม ไม่สร้างโครงการซ้ำ
+                            await setDoc(doc(db, 'artifacts', canvasAppId, 'public', 'data', 'proposals', ordinanceId), ordinanceData, { merge: true });
+                            upgradeSaveStage = 'เชื่อมโครงการต้นทาง';
+                            await setDoc(doc(db, 'artifacts', canvasAppId, 'public', 'data', 'proposals', sourceId), sourceUpdate, { merge: true });
+                        }
+                        const currentSource = App.state.proposals.find(p => p.id === sourceId);
+                        if(currentSource) Object.assign(currentSource, sourceUpdate);
+                        const ordinanceIndex = App.state.proposals.findIndex(p => p.id === ordinanceId);
+                        if(ordinanceIndex >= 0) App.state.proposals[ordinanceIndex] = { id: ordinanceId, ...ordinanceData };
+                        else App.state.proposals.push({ id: ordinanceId, ...ordinanceData });
+                        App.db.saveToLocal();
+                        App.map.drawMarkers();
+                        App.ui.renderAnalyzeTable();
+                        App.ui.renderSearchTable();
+                        App.ui.renderOrdinanceTable();
+                        App.ui.updateOrdinanceFolderCount();
+                        App.ui.closeModal('upgradeConfirmModal');
+                        App.state.upgradeTargetId = null;
+                        App.ui.showToast('ยกระดับเป็นโครงการข้อบัญญัติเรียบร้อยแล้ว', 'success');
+                        if(showFolder) await this.openOrdinanceFolder();
+                    } catch(e) {
+                        console.error('Upgrade Error:', e);
+                        App.ui.showToast(`ยกระดับไม่สำเร็จในขั้น “${upgradeSaveStage}”: ${e.message}`, 'error');
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fa-solid fa-arrow-up-right-dots mr-2"></i> ยืนยันยกระดับ';
+                    }
+                },
                 openDashboard() { 
-                    const t=App.state.proposals.length; const a=App.state.proposals.filter(p=>p.status==='เหมาะสม').length; const p=App.state.proposals.filter(p=>p.status==='รอพิจารณา').length;
+                    const coordinationProjects = App.state.proposals.filter(x => x.projectType !== 'ordinance');
+                    const t=coordinationProjects.length; const a=coordinationProjects.filter(p=>p.status==='เหมาะสม').length; const p=coordinationProjects.filter(p=>p.status==='รอพิจารณา').length;
                     document.getElementById('dashTotalProjects').innerText = t; document.getElementById('dashApproved').innerText = a; document.getElementById('dashPending').innerText = p;
-                    let tb=0; App.state.proposals.forEach(pr=>{ if(pr.budget&&pr.budget.b2569) tb+=parseFloat(pr.budget.b2569.replace(/,/g,'')||0); });
+                    let tb=0; coordinationProjects.forEach(pr=>{ if(pr.budget&&pr.budget.b2569) tb+=parseFloat(pr.budget.b2569.replace(/,/g,'')||0); });
                     document.getElementById('dashTotalBudget').innerText = '฿'+tb.toLocaleString();
                     this.renderCharts(); App.ui.openModal('dashboardModal'); 
                 },
@@ -1109,14 +1750,14 @@
                     const ctxC = document.getElementById('chartCount'); const ctxB = document.getElementById('chartBudget');
                     if(App.state.charts.countChart) App.state.charts.countChart.destroy(); if(App.state.charts.budgetChart) App.state.charts.budgetChart.destroy();
                     const dCnt={}, dBg={}; Object.keys(ORG_DATA).forEach(d=>{dCnt[d]=0;dBg[d]=0;});
-                    App.state.proposals.forEach(p=>{ if(dCnt[p.district]!==undefined) dCnt[p.district]++; if(dBg[p.district]!==undefined && p.budget && p.budget.b2569) dBg[p.district]+=parseFloat(p.budget.b2569.replace(/,/g,'')||0); });
+                    App.state.proposals.filter(p => p.projectType !== 'ordinance').forEach(p=>{ if(dCnt[p.district]!==undefined) dCnt[p.district]++; if(dBg[p.district]!==undefined && p.budget && p.budget.b2569) dBg[p.district]+=parseFloat(p.budget.b2569.replace(/,/g,'')||0); });
                     const lbls = Object.keys(dCnt);
                     App.state.charts.countChart = new Chart(ctxC, { type: 'bar', data: { labels:lbls, datasets:[{label:'จำนวนโครงการ', data:lbls.map(l=>dCnt[l]), backgroundColor:'#3b82f6', borderRadius:4}] }, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}} });
                     App.state.charts.budgetChart = new Chart(ctxB, { type: 'doughnut', data: { labels:lbls, datasets:[{data:lbls.map(l=>dBg[l]), backgroundColor:['#ef4444','#f97316','#f59e0b','#84cc16','#10b981','#06b6d4','#3b82f6','#8b5cf6','#d946ef']}] }, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right',labels:{font:{family:'Sarabun'}}}}} });
                 },
                 exportCSV() {
                     let csv = '\uFEFFอำเภอ,หน่วยงาน,ชื่อโครงการ,งบ2566,งบ2567,งบ2568,งบ2569,งบ2570,สถานะ\n';
-                    App.state.proposals.forEach(p => { csv += `"${p.district||''}","${p.agencyName||''}","${p.projectNameNew||p.projectNameOld||''}","${p.budget?.b2566||0}","${p.budget?.b2567||0}","${p.budget?.b2568||0}","${p.budget?.b2569||0}","${p.budget?.b2570||0}","${p.status||''}"\n`; });
+                    App.state.proposals.filter(p => p.projectType !== 'ordinance').forEach(p => { csv += `"${p.district||''}","${p.agencyName||''}","${p.projectNameNew||p.projectNameOld||''}","${p.budget?.b2566||0}","${p.budget?.b2567||0}","${p.budget?.b2568||0}","${p.budget?.b2569||0}","${p.budget?.b2570||0}","${p.status||''}"\n`; });
                     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob);
                     const link = document.createElement("a"); link.setAttribute("href", url); link.setAttribute("download", "proposals.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link);
                 },
@@ -1143,15 +1784,23 @@
                     if(!db) return this.loadLocal();
                     onSnapshot(collection(db, 'artifacts', canvasAppId, 'public', 'data', 'proposals'), (snapshot) => {
                         App.state.proposals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        App.db.saveToLocal(); App.map.drawMarkers();
+                        App.db.saveToLocal(); App.map.drawMarkers(); App.ui.updateOrdinanceFolderCount();
+                        if(!document.getElementById('ordinanceModal').classList.contains('hidden')) App.ui.renderOrdinanceTable();
+                        if(!document.getElementById('analyzeModal').classList.contains('hidden')) App.ui.renderAnalyzeTable();
                     }, (e) => { console.error(e); this.loadLocal(); });
                 },
-                loadLocal() { try { const data = localStorage.getItem('localProposals'); if(data) { App.state.proposals = JSON.parse(data); App.map.drawMarkers(); } } catch(e){} },
+                loadLocal() { try { const data = localStorage.getItem('localProposals'); if(data) { App.state.proposals = JSON.parse(data); App.map.drawMarkers(); App.ui.updateOrdinanceFolderCount(); } } catch(e){} },
                 
                 async saveProposal(isContinuous = false) {
                     const dist = document.getElementById('districtInput').value;
                     const agc = document.getElementById('agencyName').value; 
                     if(!dist || !agc) return App.ui.showToast("กรุณากรอกอำเภอและหน่วยงาน", "error");
+                    const projectNameOldValue = document.getElementById('projectNameOld').value.trim();
+                    const projectNameNewValue = document.getElementById('projectNameNew').value.trim();
+                    if(!projectNameOldValue && !projectNameNewValue) {
+                        document.getElementById('projectNameOld').focus();
+                        return App.ui.showToast("กรุณากรอกชื่อโครงการก่อนบันทึก", "error");
+                    }
                     
                     const btn = document.getElementById('btnSaveProposal'); 
                     const btnNext = document.getElementById('btnSaveAndNext');
@@ -1229,7 +1878,8 @@
                             name: att?.name || 'unnamed_file', url: att?.url || '', type: att?.type || ''
                         }));
 
-                        let cSt = 'รอพิจารณา'; if(App.state.editingId){ const ex=App.state.proposals.find(p=>p.id===App.state.editingId); if(ex&&ex.status) cSt=ex.status; }
+                        const existingRecord = App.state.editingId ? App.state.proposals.find(p=>p.id===App.state.editingId) : null;
+                        let cSt = existingRecord?.status || 'รอพิจารณา';
                         
                         let oTxtArr=[]; if(document.getElementById('chk5').checked){ 
                             if(document.getElementById('chkOther1') && document.getElementById('chkOther1').checked) oTxtArr.push('รอตรวจสอบพื้นที่'); 
@@ -1242,7 +1892,7 @@
 
                         const d = { 
                             seqNo:document.getElementById('seqNo').value, district:dist, agencyName:agc, 
-                            projectNameOld:document.getElementById('projectNameOld').value, projectNameNew:document.getElementById('projectNameNew').value, 
+                            projectNameOld:projectNameOldValue, projectNameNew:projectNameNewValue, 
                             projectDetails:document.getElementById('projectDetails').value, 
                             coordinates:{
                                 startLat: parseCoord(document.getElementById('startLatInput').value), startLng: parseCoord(document.getElementById('startLngInput').value), 
@@ -1253,23 +1903,52 @@
                             budget:{b2566:document.getElementById('budget2566').value,b2567:document.getElementById('budget2567').value,b2568:document.getElementById('budget2568').value,b2569:document.getElementById('budget2569').value,b2570:document.getElementById('budget2570').value}, 
                             checklist:{chk1:document.getElementById('chk1').checked, chk2:document.getElementById('chk2').checked, chk3:document.getElementById('chk3').checked, chk4:document.getElementById('chk4').checked, chk5:document.getElementById('chk5').checked, otherText:oTxt}, 
                             inspectorName:document.getElementById('inspectorName').value, inspectorPosition:document.getElementById('inspectorPosition').value, inspectionDate:document.getElementById('inspectionDate').value, 
-                            status:cSt, timestamp:new Date().toISOString(), attachments: sanitizedAttachments 
+                            projectType:existingRecord?.projectType || 'coordination', status:cSt, workflowStatus:existingRecord ? App.ui.getWorkflowStatus(existingRecord) : 'รับเรื่อง', timestamp:new Date().toISOString(), attachments: sanitizedAttachments,
+                            ...(Array.isArray(existingRecord?.workflowHistory) ? { workflowHistory: existingRecord.workflowHistory } : {}),
+                            ...(existingRecord?.ordinanceProjectId ? { ordinanceProjectId: existingRecord.ordinanceProjectId } : {}),
+                            ...(existingRecord?.coordinationStatus ? { coordinationStatus: existingRecord.coordinationStatus } : {}),
+                            ...(existingRecord?.upgradedAt ? { upgradedAt: existingRecord.upgradedAt } : {}),
+                            ...(existingRecord?.sourceCoordinationId ? { sourceCoordinationId: existingRecord.sourceCoordinationId } : {}),
+                            ...(existingRecord?.ordinanceStatus ? { ordinanceStatus: existingRecord.ordinanceStatus } : {}),
+                            ...(existingRecord?.projectType === 'ordinance' ? { ordinanceActive: existingRecord.ordinanceActive !== false } : {})
                         };
                         
                         if(db) {
                             const dbPromise = setDoc(doc(db, 'artifacts', canvasAppId, 'public', 'data', 'proposals', id), d);
                             const dbTimeout = new Promise((_, rej) => setTimeout(() => rej(new Error("DB timeout")), 8000));
                             await Promise.race([dbPromise, dbTimeout]);
-                        } else { 
-                            const i=App.state.proposals.findIndex(p=>p.id===id); if(i>=0)App.state.proposals[i]={id,...d}; else App.state.proposals.push({id,...d}); 
-                            App.db.saveToLocal(); App.map.drawMarkers(); 
+                        }
+                        const savedIndex=App.state.proposals.findIndex(p=>p.id===id); if(savedIndex>=0)App.state.proposals[savedIndex]={id,...d}; else App.state.proposals.push({id,...d});
+                        App.db.saveToLocal(); App.map.drawMarkers();
+
+                        // หากโครงการต้นทางมีแฟ้มข้อบัญญัติเชื่อมอยู่ ให้ข้อมูลที่แก้ไข (รวมชื่อโครงการ) ตามไปอัตโนมัติ
+                        const linkedOrdinance = existingRecord?.projectType !== 'ordinance' ? App.ui.findLinkedOrdinance(existingRecord) : null;
+                        if(existingRecord?.projectType !== 'ordinance' && (existingRecord?.ordinanceProjectId || linkedOrdinance)) {
+                            const ordinanceId = existingRecord.ordinanceProjectId || linkedOrdinance.id;
+                            const linkedRecord = linkedOrdinance;
+                            const { ordinanceProjectId: removedLink, coordinationStatus: removedCoordinationStatus, ...baseOrdinanceData } = d;
+                            const ordinanceSyncData = {
+                                ...baseOrdinanceData,
+                                projectType:'ordinance',
+                                ordinanceActive:true,
+                                sourceCoordinationId:id,
+                                workflowStatus:'โครงการข้อบัญญัติ',
+                                ordinanceStatus:linkedRecord?.ordinanceStatus || 'เตรียมดำเนินการ',
+                                upgradedAt:existingRecord.upgradedAt || new Date().toISOString()
+                            };
+                            if(db) await setDoc(doc(db, 'artifacts', canvasAppId, 'public', 'data', 'proposals', ordinanceId), ordinanceSyncData, {merge:true});
+                            const ordinanceIndex = App.state.proposals.findIndex(p => p.id === ordinanceId);
+                            if(ordinanceIndex >= 0) App.state.proposals[ordinanceIndex] = { ...App.state.proposals[ordinanceIndex], id:ordinanceId, ...ordinanceSyncData };
+                            else App.state.proposals.push({id:ordinanceId, ...ordinanceSyncData});
+                            App.db.saveToLocal();
+                            App.ui.updateOrdinanceFolderCount();
                         }
                         
                         App.ui.showToast("บันทึกข้อมูลโครงการสำเร็จ", "success"); 
                         
                         if(isContinuous) {
                             let max = 0;
-                            App.state.proposals.forEach(p => {
+                            App.state.proposals.filter(p => p.projectType !== 'ordinance').forEach(p => {
                                 if (p.district === dist && p.agencyName === agc) {
                                     const n = parseInt(p.seqNo) || 0;
                                     if (n > max) max = n;
@@ -1282,8 +1961,10 @@
                             const modalScroll = document.querySelector('#proposalModal .overflow-y-auto');
                             if(modalScroll) modalScroll.scrollTop = 0;
                         } else {
+                            const returnToOrdinanceFolder = existingRecord?.projectType === 'ordinance';
                             App.features.clearForm(); 
                             App.ui.closeModal('proposalModal');
+                            if(returnToOrdinanceFolder) await App.features.openOrdinanceFolder();
                         }
                         
                     } catch(e) { 
@@ -1300,7 +1981,63 @@
                     }
                 },
                 
-                async updateStatus(id, st) { if(db) await updateDoc(doc(db, 'artifacts', canvasAppId, 'public', 'data', 'proposals', id), {status:st}); App.ui.showToast(`เปลี่ยนเป็น "${st}" สำเร็จ`, "success"); }
+                async updateWorkflowStatus(id, nextStatus) {
+                    const p = App.state.proposals.find(x => x.id === id && x.projectType !== 'ordinance');
+                    if(!p) return App.ui.showToast('ไม่พบโครงการ', 'error');
+                    const currentStatus = App.ui.getWorkflowStatus(p);
+                    if(p.ordinanceProjectId || currentStatus === 'ยกระดับเป็นโครงการข้อบัญญัติแล้ว') {
+                        App.ui.renderAnalyzeTable();
+                        return App.ui.showToast('โครงการนี้ยกระดับเป็นข้อบัญญัติแล้ว ไม่สามารถย้อนขั้นตอนจากหน้านี้ได้', 'error');
+                    }
+                    if(currentStatus === nextStatus) return;
+                    if(nextStatus === 'ได้รับคัดเลือกเข้าสู่ข้อบัญญัติ' && !App.ui.getProjectName(p).trim()) {
+                        App.ui.renderAnalyzeTable();
+                        return App.ui.showToast('กรุณากด “แก้ไข” และกรอกชื่อโครงการก่อนเลือกเข้าสู่ข้อบัญญัติ', 'error');
+                    }
+                    const changedAt = new Date().toISOString();
+                    const workflowHistory = [
+                        ...(Array.isArray(p.workflowHistory) ? p.workflowHistory : []),
+                        { from: currentStatus, to: nextStatus, at: changedAt }
+                    ];
+                    try {
+                        if(db) await updateDoc(doc(db, 'artifacts', canvasAppId, 'public', 'data', 'proposals', id), {workflowStatus:nextStatus, workflowHistory, workflowUpdatedAt:changedAt});
+                        p.workflowStatus = nextStatus;
+                        p.workflowHistory = workflowHistory;
+                        p.workflowUpdatedAt = changedAt;
+                        App.db.saveToLocal();
+                        App.ui.renderAnalyzeTable();
+                        App.ui.renderSearchTable();
+                        App.map.drawMarkers();
+                        if(nextStatus === 'ได้รับคัดเลือกเข้าสู่ข้อบัญญัติ') {
+                            App.state.upgradeTargetId = id;
+                            App.ui.showToast('กำลังสร้างแฟ้มโครงการข้อบัญญัติ...', 'info');
+                            await App.features.executeUpgrade(true);
+                        } else {
+                            App.ui.showToast(`เปลี่ยนขั้นตอนเป็น “${nextStatus}” สำเร็จ`, 'success');
+                        }
+                    } catch(e) {
+                        console.error('Workflow Update Error:', e);
+                        App.ui.renderAnalyzeTable();
+                        App.ui.showToast(`เปลี่ยนขั้นตอนไม่สำเร็จ: ${e.message}`, 'error');
+                    }
+                },
+                async updateStatus(id, st) {
+                    const p = App.state.proposals.find(x => x.id === id && x.projectType !== 'ordinance');
+                    if(!p) return App.ui.showToast('ไม่พบโครงการ', 'error');
+                    try {
+                        if(db) await updateDoc(doc(db, 'artifacts', canvasAppId, 'public', 'data', 'proposals', id), {status:st});
+                        p.status = st;
+                        App.db.saveToLocal();
+                        App.ui.renderAnalyzeTable();
+                        App.ui.renderSearchTable();
+                        App.map.drawMarkers();
+                        App.ui.showToast(`เปลี่ยนเป็น "${st}" สำเร็จ`, "success");
+                    } catch(e) {
+                        console.error('Status Update Error:', e);
+                        App.ui.renderAnalyzeTable();
+                        App.ui.showToast(`เปลี่ยนสถานะไม่สำเร็จ: ${e.message}`, 'error');
+                    }
+                }
             }
         };
 
