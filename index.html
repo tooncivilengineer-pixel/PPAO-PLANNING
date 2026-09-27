@@ -658,6 +658,24 @@
                     if(project?.status === 'ยกระดับเป็นโครงการข้อบัญญัติแล้ว' || project?.ordinanceProjectId) return 'ยกระดับเป็นโครงการข้อบัญญัติแล้ว';
                     return 'รับเรื่อง';
                 },
+                getSelectionInfo(project) {
+                    const status = this.getWorkflowStatus(project);
+                    const selections = {
+                        'ได้รับคัดเลือกเข้าสู่ข้อบัญญัติ': 'ข้อบัญญัติ',
+                        'ยกระดับเป็นโครงการข้อบัญญัติแล้ว': 'ข้อบัญญัติ',
+                        'โครงการข้อบัญญัติ': 'ข้อบัญญัติ',
+                        'ได้รับคัดเลือกเข้าสู่จ่ายขาดเงินสะสม': 'จ่ายขาดเงินสะสม',
+                        'ได้รับคัดเลือกเข้าสู่โอนตั้งจ่ายรายการใหม่': 'โอนตั้งจ่ายรายการใหม่',
+                        'ได้รับคัดเลือกเข้าสู่โครงการเงินอุดหนุนเฉพาะกิจ': 'เงินอุดหนุนเฉพาะกิจ'
+                    };
+                    const destination = selections[status] || '';
+                    return { selected: !!destination, destination, status };
+                },
+                getSelectionBadge(project, compact = false) {
+                    const info = this.getSelectionInfo(project);
+                    if(!info.selected) return '';
+                    return `<div class="${compact?'mt-1 text-[10px]':'mb-3 text-xs'} font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 rounded px-2 py-1 whitespace-normal"><i class="fa-solid fa-circle-check mr-1"></i>ได้รับการคัดเลือกแล้ว${compact?' — ':' เข้าสู่ '}${this.escapeHtml(info.destination)}</div>`;
+                },
                 getProjectName(project) {
                     if(!project) return '';
                     const getDirectName = item => {
@@ -710,12 +728,13 @@
                         let sc = p.status === 'เหมาะสม' ? 'bg-emerald-100 text-emerald-800' : (p.status === 'ไม่เหมาะสม' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800');
                         const isSyncOk = App.features.checkGeometrySync(p); const warn = !isSyncOk ? `<i class="fa-solid fa-triangle-exclamation text-red-500 ml-2" title="พิกัดคลาดเคลื่อน"></i>` : '';
                         const nameDisplay = App.ui.getProjectName(p) || '(ไม่มีชื่อโครงการ)';
+                        const selectionBadge = App.ui.getSelectionBadge(p, true);
                         return `<tr class="border-b hover:bg-indigo-50">
                             <td class="p-3 text-center font-bold text-gray-600">${i + 1}</td>
                             <td class="p-3">อ.${p.district||'-'} <span class="text-gray-500 font-medium">(${p.agencyName||'-'})</span> <span class="text-xs text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">(ลำดับที่ ${p.seqNo||'-'})</span></td>
-                            <td class="p-3 font-medium max-w-[200px] truncate text-blue-700" title="${nameDisplay}">${nameDisplay}${warn}</td>
+                            <td class="p-3 font-medium max-w-[200px] text-blue-700" title="${nameDisplay}"><div class="truncate">${nameDisplay}${warn}</div>${selectionBadge}</td>
                             <td class="p-3 text-right font-bold">฿${totalB.toLocaleString()}</td>
-                            <td class="p-3 text-center"><span class="${sc} px-2 py-1 rounded text-xs font-bold">${p.status||'รอพิจารณา'}</span><div class="mt-1.5 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-1.5 py-1 whitespace-normal">${App.ui.getWorkflowStatus(p)}</div></td>
+                            <td class="p-3 text-center"><span class="${sc} px-2 py-1 rounded text-xs font-bold">${p.status||'รอพิจารณา'}</span><div class="mt-1.5 text-[10px] font-bold ${App.ui.getSelectionInfo(p).selected?'text-emerald-800 bg-emerald-50 border-emerald-200':'text-indigo-700 bg-indigo-50 border-indigo-100'} border rounded px-1.5 py-1 whitespace-normal">${App.ui.getWorkflowStatus(p)}</div></td>
                             <td class="p-3 text-center whitespace-nowrap">
                                 <button onclick="App.features.openProposalDetail('${p.id}')" class="bg-sky-100 text-sky-700 hover:bg-sky-200 px-2 py-1 rounded text-xs mr-1" title="ดูรายละเอียด"><i class="fa-solid fa-info"></i></button>
                                 <button onclick="App.features.panTo('${p.id}')" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-2 py-1 rounded text-xs mr-1" title="ซูมดูในแผนที่"><i class="fa-solid fa-map"></i></button>
@@ -790,6 +809,7 @@
                                 </select>
                             </td>
                             <td class="p-3 text-center min-w-[270px] bg-indigo-50/30">
+                                ${App.ui.getSelectionBadge(p, true)}
                                 <select onchange="App.db.updateWorkflowStatus('${p.id}', this.value)" ${workflowStatus==='ยกระดับเป็นโครงการข้อบัญญัติแล้ว'?'disabled':''} class="w-full border border-indigo-200 rounded px-2 py-1.5 text-xs font-bold outline-none ${workflowStatus==='ยกระดับเป็นโครงการข้อบัญญัติแล้ว'?'bg-indigo-100 text-indigo-800':'bg-white text-gray-700'}">
                                     <option value="รับเรื่อง" ${workflowStatus==='รับเรื่อง'?'selected':''}>1. รับเรื่อง</option>
                                     <option value="รอสำรวจ" ${workflowStatus==='รอสำรวจ'?'selected':''}>2. รอสำรวจ</option>
@@ -797,9 +817,13 @@
                                     <option value="ตรวจสอบแล้ว" ${workflowStatus==='ตรวจสอบแล้ว'?'selected':''}>4. ตรวจสอบแล้ว</option>
                                     <option value="ส่งฝ่ายแผน" ${workflowStatus==='ส่งฝ่ายแผน'?'selected':''}>5. ส่งฝ่ายแผน</option>
                                     <option value="บรรจุแผนประจำปี" ${workflowStatus==='บรรจุแผนประจำปี'?'selected':''}>6. บรรจุแผนประจำปี</option>
-                                    <option value="รอพิจารณาข้อบัญญัติ" ${workflowStatus==='รอพิจารณาข้อบัญญัติ'?'selected':''}>7. รอพิจารณาข้อบัญญัติ</option>
+                                    <option value="รอการพิจารณา" ${workflowStatus==='รอการพิจารณา'?'selected':''}>7. รอการพิจารณา</option>
+                                    ${workflowStatus==='รอพิจารณาข้อบัญญัติ'?'<option value="รอพิจารณาข้อบัญญัติ" selected>ข้อมูลเดิม: รอพิจารณาข้อบัญญัติ</option>':''}
                                     <option value="ได้รับคัดเลือกเข้าสู่ข้อบัญญัติ" ${workflowStatus==='ได้รับคัดเลือกเข้าสู่ข้อบัญญัติ'?'selected':''}>8. ได้รับคัดเลือกเข้าสู่ข้อบัญญัติ</option>
-                                    <option value="ไม่ได้รับคัดเลือก" ${workflowStatus==='ไม่ได้รับคัดเลือก'?'selected':''}>ไม่ได้รับคัดเลือก</option>
+                                    <option value="ได้รับคัดเลือกเข้าสู่จ่ายขาดเงินสะสม" ${workflowStatus==='ได้รับคัดเลือกเข้าสู่จ่ายขาดเงินสะสม'?'selected':''}>9. ได้รับคัดเลือกเข้าสู่จ่ายขาดเงินสะสม</option>
+                                    <option value="ได้รับคัดเลือกเข้าสู่โอนตั้งจ่ายรายการใหม่" ${workflowStatus==='ได้รับคัดเลือกเข้าสู่โอนตั้งจ่ายรายการใหม่'?'selected':''}>10. ได้รับคัดเลือกเข้าสู่โอนตั้งจ่ายรายการใหม่</option>
+                                    <option value="ได้รับคัดเลือกเข้าสู่โครงการเงินอุดหนุนเฉพาะกิจ" ${workflowStatus==='ได้รับคัดเลือกเข้าสู่โครงการเงินอุดหนุนเฉพาะกิจ'?'selected':''}>11. ได้รับคัดเลือกเข้าสู่โครงการเงินอุดหนุนเฉพาะกิจ</option>
+                                    <option value="ไม่ได้รับคัดเลือก" ${workflowStatus==='ไม่ได้รับคัดเลือก'?'selected':''}>12. ไม่ได้รับคัดเลือก</option>
                                     <option value="ยกระดับเป็นโครงการข้อบัญญัติแล้ว" ${workflowStatus==='ยกระดับเป็นโครงการข้อบัญญัติแล้ว'?'selected':''}>ยกระดับเป็นข้อบัญญัติแล้ว</option>
                                 </select>
                                 ${linkedOrdinance ? `<button onclick="App.features.openLinkedOrdinance('${linkedOrdinance.id}')" class="mt-2 w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-800 border border-indigo-200 px-3 py-2 rounded text-xs font-bold"><i class="fa-solid fa-link mr-1"></i> เปิดแฟ้มข้อบัญญัติ</button>` : ''}
@@ -839,8 +863,21 @@
             map: {
                 init() {
                     const m = L.map('map', { zoomControl: false }).setView([16.8211, 100.2659], 10); App.state.map = m;
-                    App.state.layers.street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(m);
-                    App.state.layers.sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
+                    App.state.layers.street = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                        maxZoom: 19,
+                        attribution: 'Tiles &copy; Esri &mdash; Sources: Esri, TomTom, Garmin, FAO, NOAA, USGS, OpenStreetMap contributors and the GIS User Community'
+                    }).addTo(m);
+                    App.state.layers.sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                        maxZoom: 19,
+                        attribution: 'Tiles &copy; Esri, Maxar, Earthstar Geographics and the GIS User Community'
+                    });
+                    App.state.layers.street.once('tileerror', () => {
+                        if(m.hasLayer(App.state.layers.street)) {
+                            m.removeLayer(App.state.layers.street);
+                            App.state.layers.sat.addTo(m);
+                            App.ui.showToast('แผนที่ถนนขัดข้อง ระบบเปลี่ยนเป็นภาพถ่ายดาวเทียมให้แล้ว', 'info');
+                        }
+                    });
                     
                     L.control.layers({"แผนที่ถนน": App.state.layers.street, "ดาวเทียม": App.state.layers.sat}, null, { position: 'topright' }).addTo(m);
                     L.control.zoom({ position: 'bottomright' }).addTo(m);
@@ -861,6 +898,8 @@
                     App.state.kmlLayer.clearLayers();
                     App.state.proposals.filter(p => p.projectType !== 'ordinance').forEach(p => {
                         const isSyncOk = App.features.checkGeometrySync(p);
+                        const selectionInfo = App.ui.getSelectionInfo(p);
+                        const selectionBadge = App.ui.getSelectionBadge(p, true);
                         const cLine = isSyncOk ? (p.lineColor || '#3b82f6') : '#ef4444';
                         let pGeo = null; if(p.geoJSON) try { pGeo = typeof p.geoJSON === 'string' ? JSON.parse(p.geoJSON) : p.geoJSON; } catch(e){}
 
@@ -880,6 +919,7 @@
                                 </div>`;
                             
                             if(d>0) t += `<div class="text-sky-700 font-bold text-[11px] bg-sky-50/80 px-2 py-1 rounded border border-sky-100 mb-1.5 flex items-center"><i class="fa-solid fa-ruler mr-1.5 text-sky-500"></i>ระยะทางบนแผนที่: ${d.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} ม.</div>`;
+                            if(selectionInfo.selected) t += selectionBadge;
                             t += `<div class="text-indigo-700 font-bold text-[11px] bg-indigo-50 px-2 py-1 rounded border border-indigo-100 mb-1.5"><i class="fa-solid fa-route mr-1.5"></i>ขั้นตอน: ${App.ui.getWorkflowStatus(p)}</div>`;
                             if(!isSyncOk) t += `<div class="text-red-600 font-bold text-[11px] bg-red-50 px-2 py-1 rounded border border-red-200 mb-1.5 flex items-center"><i class="fa-solid fa-triangle-exclamation mr-1.5"></i>พิกัดคลาดเคลื่อน</div>`;
                             
@@ -889,10 +929,17 @@
                             layer.bindTooltip(t, { direction: 'auto', sticky: true, className: 'bg-white px-3 py-2.5 rounded-lg shadow-lg border border-gray-200' });
                             layer.on('click', () => App.features.openProposalDetail(p.id));
                             layer.addTo(App.state.kmlLayer);
+                            if(selectionInfo.selected && layer.getBounds && layer.getBounds().isValid()) {
+                                const selectedIcon = L.divIcon({className:'', html:'<div title="ได้รับการคัดเลือกแล้ว" style="width:24px;height:24px;border-radius:50%;background:#059669;color:white;border:3px solid white;box-shadow:0 1px 6px #0006;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold">✓</div>', iconSize:[24,24], iconAnchor:[12,12]});
+                                L.marker(layer.getBounds().getCenter(), {icon:selectedIcon, interactive:true})
+                                    .bindTooltip(selectionBadge, {direction:'top', className:'bg-white px-2 py-1 rounded shadow border border-emerald-200'})
+                                    .on('click', () => App.features.openProposalDetail(p.id))
+                                    .addTo(App.state.kmlLayer);
+                            }
                         }
                         
                         if (p.coordinates) {
-                            const mkIcon = (clr) => L.divIcon({ className: '', html: `<div style="background:${clr};width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.5);"></div>`, iconSize: [14,14], iconAnchor: [7,7] });
+                            const mkIcon = (clr) => L.divIcon({ className: '', html: `<div style="background:${clr};width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:${selectionInfo.selected?'0 0 0 4px #a7f3d0,':''}0 1px 4px rgba(0,0,0,0.5);"></div>`, iconSize: [14,14], iconAnchor: [7,7] });
                             
                             if(p.coordinates.startLat && p.coordinates.startLng) {
                                 const mStart = L.marker([p.coordinates.startLat, p.coordinates.startLng], {icon: mkIcon('#3b82f6'), interactive: true});
@@ -906,6 +953,7 @@
                                         <div class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-bold border border-slate-200">ลำดับ ${p.seqNo||1}</div>
                                     </div>
                                     <div class="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold border border-blue-200"><i class="fa-solid fa-location-dot mr-1"></i> จุดเริ่มต้นโครงการ</div>
+                                    ${selectionInfo.selected ? selectionBadge : ''}
                                     <div class="text-indigo-600 text-[11px] font-bold mt-2 pt-1 border-t border-dashed border-gray-200 text-center"><i class="fa-solid fa-hand-pointer mr-1"></i>คลิกเพื่อดูรายละเอียด</div>
                                 </div>`;
                                 mStart.bindTooltip(tStart, { direction: 'auto', sticky: true, className: 'bg-white px-3 py-2.5 rounded-lg shadow-lg border-l-4 border-l-blue-500' });
@@ -925,6 +973,7 @@
                                         <div class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-bold border border-slate-200">ลำดับ ${p.seqNo||1}</div>
                                     </div>
                                     <div class="inline-block bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-200"><i class="fa-solid fa-flag-checkered mr-1"></i> จุดสิ้นสุดโครงการ</div>
+                                    ${selectionInfo.selected ? selectionBadge : ''}
                                     <div class="text-indigo-600 text-[11px] font-bold mt-2 pt-1 border-t border-dashed border-gray-200 text-center"><i class="fa-solid fa-hand-pointer mr-1"></i>คลิกเพื่อดูรายละเอียด</div>
                                 </div>`;
                                 mEnd.bindTooltip(tEnd, { direction: 'auto', sticky: true, className: 'bg-white px-3 py-2.5 rounded-lg shadow-lg border-l-4 border-l-red-500' });
@@ -1430,6 +1479,7 @@
                 openProposalDetail(id) {
                     const p = App.state.proposals.find(x => x.id === id); if(!p) return;
                     const isSyncOk = App.features.checkGeometrySync(p); const warn = !isSyncOk ? `<div class="bg-red-50 text-red-600 p-3 rounded-lg border border-red-200 mb-4 text-sm font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>พิกัดจุดไม่สอดคล้องกับเส้นทาง (ห่างเกิน 150ม.)</div>` : '';
+                    const selectionBanner = App.ui.getSelectionBadge(p, false);
                     let pGeo=null; if(p.geoJSON) try{ pGeo=typeof p.geoJSON==='string'?JSON.parse(p.geoJSON):p.geoJSON;}catch(e){}
                     const d = pGeo ? App.features.calculateLength(pGeo) : 0;
                     
@@ -1457,7 +1507,7 @@
                         attHtml += '</div></div>';
                     }
 
-                    document.getElementById('detailContent').innerHTML = `${warn}<div class="grid grid-cols-2 gap-3 text-sm"><div class="col-span-2 border-b pb-2 mb-2 flex justify-between items-center"><span class="font-bold">สถานะ:</span> <span class="bg-amber-100 px-2 py-1 rounded font-bold">${p.status||'รอพิจารณา'}</span> <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-bold">ลำดับที่ ${p.seqNo||1}</span></div><div><span class="text-gray-500 block text-xs">อำเภอ</span><div class="font-bold">${p.district||'-'}</div></div><div><span class="text-gray-500 block text-xs">หน่วยงานที่ขอ</span><div class="font-bold">${p.agencyName||'-'}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">ชื่อโครงการ</span><div class="font-medium">${App.ui.escapeHtml(App.ui.getProjectName(p)||'-')}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">รายละเอียดโครงการ</span><div>${p.projectDetails||'-'}</div>${distCompareHtml}</div><div class="col-span-2 bg-sky-50 p-3 rounded flex justify-between mt-2"><span class="font-bold text-sky-800 text-xs"><i class="fa-solid fa-ruler mr-2"></i>ระยะทางบนแผนที่:</span><span class="font-bold text-sky-700">${d>0?d.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' เมตร':'-'}</span></div>${attHtml}</div>`;
+                    document.getElementById('detailContent').innerHTML = `${warn}${selectionBanner}<div class="grid grid-cols-2 gap-3 text-sm"><div class="col-span-2 border-b pb-2 mb-2 flex justify-between items-center"><span class="font-bold">สถานะ:</span> <span class="bg-amber-100 px-2 py-1 rounded font-bold">${p.status||'รอพิจารณา'}</span> <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-bold">ลำดับที่ ${p.seqNo||1}</span></div><div><span class="text-gray-500 block text-xs">อำเภอ</span><div class="font-bold">${p.district||'-'}</div></div><div><span class="text-gray-500 block text-xs">หน่วยงานที่ขอ</span><div class="font-bold">${p.agencyName||'-'}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">ชื่อโครงการ</span><div class="font-medium">${App.ui.escapeHtml(App.ui.getProjectName(p)||'-')}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">รายละเอียดโครงการ</span><div>${p.projectDetails||'-'}</div>${distCompareHtml}</div><div class="col-span-2 bg-sky-50 p-3 rounded flex justify-between mt-2"><span class="font-bold text-sky-800 text-xs"><i class="fa-solid fa-ruler mr-2"></i>ระยะทางบนแผนที่:</span><span class="font-bold text-sky-700">${d>0?d.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' เมตร':'-'}</span></div>${attHtml}</div>`;
                     document.getElementById('btnEditProposal').onclick = () => { App.ui.closeModal('detailModal'); App.features.editProject(id); }; App.ui.openModal('detailModal');
                 },
                 editProject(id) {
