@@ -923,10 +923,11 @@
                             t += `<div class="text-indigo-700 font-bold text-[11px] bg-indigo-50 px-2 py-1 rounded border border-indigo-100 mb-1.5"><i class="fa-solid fa-route mr-1.5"></i>ขั้นตอน: ${App.ui.getWorkflowStatus(p)}</div>`;
                             if(!isSyncOk) t += `<div class="text-red-600 font-bold text-[11px] bg-red-50 px-2 py-1 rounded border border-red-200 mb-1.5 flex items-center"><i class="fa-solid fa-triangle-exclamation mr-1.5"></i>พิกัดคลาดเคลื่อน</div>`;
                             
-                            t += `<div class="text-indigo-600 text-[11px] font-bold mt-1 pt-1 border-t border-dashed border-gray-200 text-center"><i class="fa-solid fa-hand-pointer mr-1"></i>คลิกเพื่อดูรายละเอียด</div>
+                            t += `<button type="button" onclick="App.state.map.closePopup(); App.features.openProposalDetail('${App.ui.escapeHtml(p.id)}')" class="w-full text-indigo-700 hover:text-white hover:bg-indigo-600 text-[11px] font-bold mt-1 pt-2 pb-1.5 px-2 border-t border-dashed border-gray-200 rounded-b transition-colors cursor-pointer"><i class="fa-solid fa-hand-pointer mr-1"></i>ดูรายละเอียดโครงการ</button>
                             </div>`;
                             
-                            layer.bindTooltip(t, { direction: 'auto', sticky: true, className: 'bg-white px-3 py-2.5 rounded-lg shadow-lg border border-gray-200' });
+                            layer.bindPopup(t, { closeButton: true, autoClose: true, closeOnClick: false, autoPan: false, maxWidth: 310, className: 'project-hover-popup' });
+                            layer.on('mouseover', e => layer.openPopup(e.latlng));
                             layer.on('click', () => App.features.openProposalDetail(p.id));
                             layer.addTo(App.state.kmlLayer);
                             if(selectionInfo.selected && layer.getBounds && layer.getBounds().isValid()) {
