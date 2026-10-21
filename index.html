@@ -86,6 +86,10 @@
                 <i class="fa-solid fa-chart-pie w-6 text-center mr-3 text-lg text-amber-500"></i> Dashboard ผู้บริหาร
             </button>
 
+            <a href="https://tooncivilengineer-pixel.github.io/Road-sheet/" target="_blank" rel="noopener noreferrer" class="pointer-events-auto bg-white/95 backdrop-blur-sm shadow-md border border-orange-200 hover:bg-orange-50 text-orange-700 font-bold py-3 px-4 rounded-lg text-sm flex items-center justify-start transition-all active:scale-95">
+                <i class="fa-solid fa-road w-6 text-center mr-3 text-lg text-orange-500"></i> ประมาณราคางานทาง
+            </a>
+
             <button onclick="App.ui.openModal('manageDataModal')" class="pointer-events-auto bg-white/95 backdrop-blur-sm shadow-md border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-lg text-sm flex items-center justify-start transition-all active:scale-95">
                 <i class="fa-solid fa-database w-6 text-center mr-3 text-lg text-emerald-600"></i> ส่งออก/สำรองข้อมูล
             </button>
@@ -230,11 +234,11 @@
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center gap-4"><div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl"><i class="fa-solid fa-file-contract"></i></div><div><div class="text-sm text-gray-500 font-bold">โครงการทั้งหมด</div><div class="text-2xl font-black" id="dashTotalProjects">0</div></div></div>
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center gap-4"><div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl"><i class="fa-solid fa-check-double"></i></div><div><div class="text-sm text-gray-500 font-bold">พิจารณาเหมาะสม</div><div class="text-2xl font-black text-emerald-600" id="dashApproved">0</div></div></div>
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center gap-4"><div class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xl"><i class="fa-solid fa-hourglass-half"></i></div><div><div class="text-sm text-gray-500 font-bold">รอพิจารณา</div><div class="text-2xl font-black text-amber-600" id="dashPending">0</div></div></div>
-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center gap-4"><div class="w-12 h-12 rounded-full bg-fuchsia-100 text-fuchsia-600 flex items-center justify-center text-xl"><i class="fa-solid fa-sack-dollar"></i></div><div><div class="text-sm text-gray-500 font-bold">รวมงบปี 2569</div><div class="text-xl font-black text-fuchsia-700" id="dashTotalBudget">฿0</div></div></div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center gap-4"><div class="w-12 h-12 rounded-full bg-fuchsia-100 text-fuchsia-600 flex items-center justify-center text-xl"><i class="fa-solid fa-sack-dollar"></i></div><div><div id="dashboardBudgetYearLabel" class="text-sm text-gray-500 font-bold">รวมงบปี 2569</div><div class="text-xl font-black text-fuchsia-700" id="dashTotalBudget">฿0</div></div></div>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200"><h4 class="font-bold text-gray-700 mb-4 text-center">จำนวนโครงการ แยกตามอำเภอ</h4><div class="relative h-72 w-full"><canvas id="chartCount"></canvas></div></div>
-                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200"><h4 class="font-bold text-gray-700 mb-4 text-center">งบประมาณปี 2569 แยกตามอำเภอ</h4><div class="relative h-72 w-full"><canvas id="chartBudget"></canvas></div></div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200"><h4 id="chartBudgetYearTitle" class="font-bold text-gray-700 mb-4 text-center">งบประมาณปี 2569 แยกตามอำเภอ</h4><div class="relative h-72 w-full"><canvas id="chartBudget"></canvas></div></div>
                 </div>
             </div>
         </div>
@@ -291,7 +295,22 @@
 
                     <!-- Section 2 -->
                     <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                        <h4 class="font-bold text-blue-800 border-b pb-2 mb-4"><i class="fa-solid fa-map-location-dot mr-2"></i> 2. รายละเอียดและสถานที่ตั้ง</h4>
+                        <h4 class="font-bold text-blue-800 border-b pb-2 mb-4"><i class="fa-solid fa-wallet mr-2"></i> 2. ประเภทของงบประมาณ</h4>
+                        <div>
+                            <label for="budgetType" class="block text-sm font-bold text-gray-700 mb-1">ประเภทของงบประมาณ *</label>
+                            <select id="budgetType" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" required>
+                                <option value="ข้อบัญญัติ" selected>ข้อบัญญัติ</option>
+                                <option value="โอนตั้งจ่ายเป็นรายการใหม่">โอนตั้งจ่ายเป็นรายการใหม่</option>
+                                <option value="จ่ายขาดเงินสะสม">จ่ายขาดเงินสะสม</option>
+                                <option value="เงินอุดหนุน">เงินอุดหนุน</option>
+                                <option value="เงินกู้">เงินกู้</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Section 3 -->
+                    <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+                        <h4 class="font-bold text-blue-800 border-b pb-2 mb-4"><i class="fa-solid fa-map-location-dot mr-2"></i> 3. รายละเอียดและสถานที่ตั้ง</h4>
                         <div class="grid grid-cols-1 gap-4">
                             <div><label class="block text-sm font-bold mb-1">รายละเอียดโครงการ *</label><textarea id="projectDetails" class="w-full border rounded-md px-3 py-2 text-sm resize-y" rows="2"></textarea></div>
                             
@@ -334,21 +353,27 @@
                         </div>
                     </div>
 
-                    <!-- Section 3 -->
+                    <!-- Section 4 -->
                     <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                        <h4 class="font-bold text-blue-800 border-b pb-2 mb-4"><i class="fa-solid fa-coins mr-2"></i> 3. งบประมาณที่เสนอขอ (บาท)</h4>
+                        <div class="border-b pb-3 mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                            <h4 class="font-bold text-blue-800"><i class="fa-solid fa-coins mr-2"></i> 4. งบประมาณที่เสนอขอ (บาท)</h4>
+                            <label class="flex items-center gap-2 text-sm font-bold text-gray-700">
+                                <span class="whitespace-nowrap">ปีเริ่มต้น พ.ศ.</span>
+                                <input type="number" id="budgetStartYear" min="2500" max="2700" step="1" value="2566" oninput="App.ui.updateBudgetYears(this.value)" class="w-24 border border-blue-300 rounded-md px-2 py-1.5 text-center font-bold text-blue-700 bg-blue-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                            </label>
+                        </div>
                         <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-                            <div><label class="block text-xs font-bold text-gray-500 mb-1 text-center">ปี 2566</label><input type="text" id="budget2566" oninput="App.ui.formatNumberInput(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center"></div>
-                            <div><label class="block text-xs font-bold text-gray-500 mb-1 text-center">ปี 2567</label><input type="text" id="budget2567" oninput="App.ui.formatNumberInput(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center"></div>
-                            <div><label class="block text-xs font-bold text-gray-500 mb-1 text-center">ปี 2568</label><input type="text" id="budget2568" oninput="App.ui.formatNumberInput(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center"></div>
-                            <div><label class="block text-xs font-bold text-gray-500 mb-1 text-center">ปี 2569</label><input type="text" id="budget2569" oninput="App.ui.formatNumberInput(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center"></div>
-                            <div><label class="block text-xs font-bold text-gray-500 mb-1 text-center">ปี 2570</label><input type="text" id="budget2570" oninput="App.ui.formatNumberInput(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center"></div>
+                            <div><label id="budgetYearLabel0" class="block text-xs font-bold text-gray-500 mb-1 text-center">ปี 2566</label><input type="text" id="budget2566" oninput="App.ui.formatNumberInput(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center"></div>
+                            <div><label id="budgetYearLabel1" class="block text-xs font-bold text-gray-500 mb-1 text-center">ปี 2567</label><input type="text" id="budget2567" oninput="App.ui.formatNumberInput(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center"></div>
+                            <div><label id="budgetYearLabel2" class="block text-xs font-bold text-gray-500 mb-1 text-center">ปี 2568</label><input type="text" id="budget2568" oninput="App.ui.formatNumberInput(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center"></div>
+                            <div><label id="budgetYearLabel3" class="block text-xs font-bold text-gray-500 mb-1 text-center">ปี 2569</label><input type="text" id="budget2569" oninput="App.ui.formatNumberInput(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center"></div>
+                            <div><label id="budgetYearLabel4" class="block text-xs font-bold text-gray-500 mb-1 text-center">ปี 2570</label><input type="text" id="budget2570" oninput="App.ui.formatNumberInput(this)" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-center"></div>
                         </div>
                     </div>
 
-                    <!-- Section 4 -->
+                    <!-- Section 5 -->
                     <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                        <h4 class="font-bold text-blue-800 border-b pb-2 mb-4"><i class="fa-solid fa-list-check mr-2"></i> 4. ผลการตรวจสอบพื้นที่</h4>
+                        <h4 class="font-bold text-blue-800 border-b pb-2 mb-4"><i class="fa-solid fa-list-check mr-2"></i> 5. ผลการตรวจสอบพื้นที่</h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                             <label class="flex items-center gap-3 p-2 hover:bg-slate-50"><input type="checkbox" id="chk1" class="w-4 h-4"><span class="font-medium">1. ขนาดพื้นที่เป็นไปตามกรอบฯ</span></label>
                             <label class="flex items-center gap-3 p-2 hover:bg-slate-50"><input type="checkbox" id="chk2" class="w-4 h-4"><span class="font-medium">2. พิกัดทางภูมิศาสตร์ถูกต้อง</span></label>
@@ -365,9 +390,9 @@
                         </div>
                     </div>
 
-                    <!-- Section 5 -->
+                    <!-- Section 6 -->
                     <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                        <h4 class="font-bold text-blue-800 border-b pb-2 mb-4"><i class="fa-solid fa-user-check mr-2"></i> 5. ข้อมูลผู้ตรวจสอบพื้นที่</h4>
+                        <h4 class="font-bold text-blue-800 border-b pb-2 mb-4"><i class="fa-solid fa-user-check mr-2"></i> 6. ข้อมูลผู้ตรวจสอบพื้นที่</h4>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div><label class="block text-sm font-bold mb-1">ลงชื่อ (ชื่อ-นามสกุล)</label><input type="text" id="inspectorName" class="w-full border rounded-md px-3 py-2 text-sm"></div>
                             <div><label class="block text-sm font-bold mb-1">ตำแหน่ง</label><input type="text" id="inspectorPosition" list="posList" class="w-full border rounded-md px-3 py-2 text-sm"><datalist id="posList"><option value="นายช่างโยธาชำนาญงาน"><option value="วิศวกรโยธาปฏิบัติการ"></datalist></div>
@@ -375,9 +400,9 @@
                         </div>
                     </div>
 
-                    <!-- Section 6: Attachments -->
+                    <!-- Section 7: Attachments -->
                     <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                        <h4 class="font-bold text-blue-800 border-b pb-2 mb-4"><i class="fa-solid fa-paperclip mr-2"></i> 6. เอกสารแนบ (รูปภาพสถานที่ / ไฟล์ PDF)</h4>
+                        <h4 class="font-bold text-blue-800 border-b pb-2 mb-4"><i class="fa-solid fa-paperclip mr-2"></i> 7. เอกสารแนบ (รูปภาพสถานที่ / ไฟล์ PDF)</h4>
                         <div class="flex flex-col gap-3">
                             <div class="flex items-center gap-3">
                                 <button type="button" onclick="document.getElementById('fileAttachmentInput').click()" class="bg-indigo-50 text-indigo-700 font-bold px-4 py-2 rounded-md hover:bg-indigo-100 text-sm border border-indigo-200 shadow-sm transition">
@@ -622,6 +647,7 @@
                         if(dMenu) dMenu.innerHTML += `<button onclick="App.features.search('${d}')" class="bg-white hover:bg-blue-50 text-gray-600 border border-gray-200 py-2 px-3 rounded text-xs text-left w-full mt-1"><i class="fa-solid fa-caret-right mr-2"></i> ${d}</button>`;
                     });
                     document.getElementById('coordSystem').addEventListener('change', App.ui.updateCoordDisplay);
+                    App.ui.updateBudgetYears(localStorage.getItem('planBudgetStartYear') || 2566, false);
                 },
                 updateAgencyList() {
                     const d = document.getElementById('districtInput').value; const dl = document.getElementById('agencyDataList');
@@ -644,6 +670,17 @@
                     setTimeout(() => t.classList.add('translate-x-[150%]', 'opacity-0'), 3500);
                 },
                 formatNumberInput(input) { let val = input.value.replace(/,/g, ''); if (isNaN(val) || val === '') { input.value = ''; return; } input.value = parseInt(val).toLocaleString('en-US'); },
+                updateBudgetYears(value, remember = true) {
+                    const input = document.getElementById('budgetStartYear');
+                    let startYear = parseInt(value, 10);
+                    if(!Number.isInteger(startYear) || startYear < 2500 || startYear > 2700) return;
+                    if(input) input.value = startYear;
+                    for(let i = 0; i < 5; i++) {
+                        const label = document.getElementById(`budgetYearLabel${i}`);
+                        if(label) label.textContent = `ปี ${startYear + i}`;
+                    }
+                    if(remember) localStorage.setItem('planBudgetStartYear', String(startYear));
+                },
                 toggleOtherOptions(checkbox) { const div = document.getElementById('otherOptions'); checkbox.checked ? div.classList.remove('hidden') : div.classList.add('hidden'); },
                 escapeHtml(value) {
                     return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
@@ -993,7 +1030,7 @@
                     if(!this.panel) {
                         this.panel=document.createElement('section'); this.panel.id='roadMeasurePanel';
                         this.panel.style.cssText='position:absolute;right:12px;top:75px;z-index:2100;width:min(370px,calc(100vw - 24px));max-height:80vh;overflow:auto;background:white;padding:18px;border:1px solid #93c5fd;border-radius:12px;box-shadow:0 6px 24px #0003;font-size:14px';
-                        this.panel.innerHTML=`<div class="flex justify-between items-center mb-3"><strong class="text-blue-800">หาแนวถนนตามระยะทาง</strong><button onclick="App.roadMeasure.close()" aria-label="ปิดเครื่องมือ">✕</button></div>
+                        this.panel.innerHTML=`<div class="flex justify-between items-center gap-3 mb-3"><strong class="text-blue-800">หาแนวถนนตามระยะทาง</strong><button type="button" onclick="App.roadMeasure.close()" aria-label="ปิดหน้าต่างหาแนวถนน" title="ปิดหน้าต่าง" class="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-full bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 font-bold text-lg shadow-sm">✕</button></div>
                         <label for="rmLength">ระยะทางที่ต้องการ (เมตร)</label><input id="rmLength" type="number" min="1" max="100000" value="1500" step="any" class="border rounded p-2 w-full my-2" oninput="App.roadMeasure.invalidate()">
                         <label for="rmMode">วิธีกำหนดแนว</label><select id="rmMode" class="border rounded p-2 w-full my-2" onchange="App.roadMeasure.invalidate()"><option value="road">ตามถนนอัตโนมัติ (ออนไลน์)</option><option value="manual">วาดตามแนวเอง (ไม่เกาะถนนอัตโนมัติ)</option></select>
                         <p class="text-gray-600 mb-3">คลิกจุดเริ่มต้น แล้วคลิกจุดผ่านตามลำดับไปตามสายทาง ให้จุดสุดท้ายอยู่เลยระยะที่ต้องการ ระบบจะตัดปลายเส้นให้เอง หากมีทางแยกให้เพิ่มจุดผ่านเพื่อกำหนดสายทาง</p>
@@ -1002,7 +1039,8 @@
                         <button id="rmCalculate" class="bg-blue-700 text-white rounded p-2 w-full" onclick="App.roadMeasure.calculate()">คำนวณและตัดตามระยะ</button>
                         <label class="flex gap-2 my-3"><input id="rmReviewed" type="checkbox" onchange="App.roadMeasure.refreshUse()">ตรวจแล้วว่าเส้นไปตามถนนที่ต้องการ</label>
                         <button id="rmUse" disabled class="bg-emerald-700 text-white rounded p-2 w-full disabled:opacity-40" onclick="App.roadMeasure.use()">ใช้แนวนี้สร้างโครงการ</button>
-                        <p class="mt-3 text-gray-500">ระยะตามแนวแผนที่ ไม่ใช่ระยะสำรวจจริง โหมดออนไลน์ส่งเฉพาะจุดที่เลือกไปยัง OSRM และอาจเลือกทางอ้อมตามกฎจราจร หากหาเส้นทางไม่ได้จะไม่สร้างเส้นตรงทดแทน</p>`;
+                        <p class="mt-3 text-gray-500">ระยะตามแนวแผนที่ ไม่ใช่ระยะสำรวจจริง โหมดออนไลน์ส่งเฉพาะจุดที่เลือกไปยัง OSRM และอาจเลือกทางอ้อมตามกฎจราจร หากหาเส้นทางไม่ได้จะไม่สร้างเส้นตรงทดแทน</p>
+                        <button type="button" onclick="App.roadMeasure.close()" class="mt-4 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300 rounded-lg p-2.5 w-full font-bold"><i class="fa-solid fa-xmark mr-2"></i>ปิดหน้าต่าง</button>`;
                         document.body.appendChild(this.panel); L.DomEvent.disableClickPropagation(this.panel); L.DomEvent.disableScrollPropagation(this.panel);
                         this.layer=L.featureGroup().addTo(App.state.map);
                     }
@@ -1323,8 +1361,10 @@
                 clearForm(keepAgency = false) {
                     const cDist = document.getElementById('districtInput').value;
                     const cAgc = document.getElementById('agencyName').value;
+                    const cBudgetStartYear = parseInt(document.getElementById('budgetStartYear')?.value || localStorage.getItem('planBudgetStartYear') || 2566, 10) || 2566;
                     
                     App.state.editingId = null; document.getElementById('dataForm').reset(); App.state.currentGeoJSON = null; this.updateDistanceDisplay(null);
+                    App.ui.updateBudgetYears(cBudgetStartYear, false);
                     App.state.currentRoutes = []; App.state.currentRouteIndex = 0; 
                     App.state.attachments = []; App.state.existingAttachments = []; this.renderAttachments();
                     
@@ -1508,12 +1548,12 @@
                         attHtml += '</div></div>';
                     }
 
-                    document.getElementById('detailContent').innerHTML = `${warn}${selectionBanner}<div class="grid grid-cols-2 gap-3 text-sm"><div class="col-span-2 border-b pb-2 mb-2 flex justify-between items-center"><span class="font-bold">สถานะ:</span> <span class="bg-amber-100 px-2 py-1 rounded font-bold">${p.status||'รอพิจารณา'}</span> <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-bold">ลำดับที่ ${p.seqNo||1}</span></div><div><span class="text-gray-500 block text-xs">อำเภอ</span><div class="font-bold">${p.district||'-'}</div></div><div><span class="text-gray-500 block text-xs">หน่วยงานที่ขอ</span><div class="font-bold">${p.agencyName||'-'}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">ชื่อโครงการ</span><div class="font-medium">${App.ui.escapeHtml(App.ui.getProjectName(p)||'-')}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">รายละเอียดโครงการ</span><div>${p.projectDetails||'-'}</div>${distCompareHtml}</div><div class="col-span-2 bg-sky-50 p-3 rounded flex justify-between mt-2"><span class="font-bold text-sky-800 text-xs"><i class="fa-solid fa-ruler mr-2"></i>ระยะทางบนแผนที่:</span><span class="font-bold text-sky-700">${d>0?d.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' เมตร':'-'}</span></div>${attHtml}</div>`;
+                    document.getElementById('detailContent').innerHTML = `${warn}${selectionBanner}<div class="grid grid-cols-2 gap-3 text-sm"><div class="col-span-2 border-b pb-2 mb-2 flex justify-between items-center"><span class="font-bold">สถานะ:</span> <span class="bg-amber-100 px-2 py-1 rounded font-bold">${p.status||'รอพิจารณา'}</span> <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-bold">ลำดับที่ ${p.seqNo||1}</span></div><div><span class="text-gray-500 block text-xs">อำเภอ</span><div class="font-bold">${p.district||'-'}</div></div><div><span class="text-gray-500 block text-xs">หน่วยงานที่ขอ</span><div class="font-bold">${p.agencyName||'-'}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">ประเภทของงบประมาณ</span><div class="font-bold text-blue-800">${App.ui.escapeHtml(p.budgetType||'-')}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">ชื่อโครงการ</span><div class="font-medium">${App.ui.escapeHtml(App.ui.getProjectName(p)||'-')}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">รายละเอียดโครงการ</span><div>${p.projectDetails||'-'}</div>${distCompareHtml}</div><div class="col-span-2 bg-sky-50 p-3 rounded flex justify-between mt-2"><span class="font-bold text-sky-800 text-xs"><i class="fa-solid fa-ruler mr-2"></i>ระยะทางบนแผนที่:</span><span class="font-bold text-sky-700">${d>0?d.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' เมตร':'-'}</span></div>${attHtml}</div>`;
                     document.getElementById('btnEditProposal').onclick = () => { App.ui.closeModal('detailModal'); App.features.editProject(id); }; App.ui.openModal('detailModal');
                 },
                 editProject(id) {
                     const p = App.state.proposals.find(x => x.id === id); if(!p) return; this.clearForm(); App.state.editingId = id;
-                    document.getElementById('districtInput').value = p.district || ''; App.ui.updateAgencyList(); document.getElementById('seqNo').value = p.seqNo || ''; document.getElementById('agencyName').value = p.agencyName || ''; document.getElementById('projectNameOld').value = String(p.projectNameOld || (!String(p.projectNameNew||'').trim() ? App.ui.getProjectName(p) : '') || '').trim(); document.getElementById('projectNameNew').value = String(p.projectNameNew || '').trim(); document.getElementById('projectDetails').value = p.projectDetails || '';
+                    document.getElementById('districtInput').value = p.district || ''; App.ui.updateAgencyList(); document.getElementById('seqNo').value = p.seqNo || ''; document.getElementById('agencyName').value = p.agencyName || ''; document.getElementById('projectNameOld').value = String(p.projectNameOld || (!String(p.projectNameNew||'').trim() ? App.ui.getProjectName(p) : '') || '').trim(); document.getElementById('projectNameNew').value = String(p.projectNameNew || '').trim(); document.getElementById('budgetType').value = p.budgetType || 'ข้อบัญญัติ'; App.ui.updateBudgetYears(p.budgetStartYear || 2566); document.getElementById('projectDetails').value = p.projectDetails || '';
                     if(p.coordinates) { document.getElementById('startLatInput').value = p.coordinates.startLat || ''; document.getElementById('startLngInput').value = p.coordinates.startLng || ''; document.getElementById('endLatInput').value = p.coordinates.endLat || ''; document.getElementById('endLngInput').value = p.coordinates.endLng || ''; App.features.updateMapFromInput(); }
                     document.getElementById('lineStyle').value = p.lineStyle || 'solid'; document.getElementById('lineColor').value = p.lineColor || '#3b82f6'; document.getElementById('lineWeight').value = p.lineWeight || 5;
                     if(p.budget) { document.getElementById('budget2566').value = p.budget.b2566||''; document.getElementById('budget2567').value = p.budget.b2567||''; document.getElementById('budget2568').value = p.budget.b2568||''; document.getElementById('budget2569').value = p.budget.b2569||''; document.getElementById('budget2570').value = p.budget.b2570||''; }
@@ -1550,6 +1590,8 @@
 
                     const iName = document.getElementById('inspectorName').value || '................................................';
                     const iPos = document.getElementById('inspectorPosition').value || '................................................';
+                    const reportStartYear = parseInt(agencyProposals[0]?.budgetStartYear || localStorage.getItem('planBudgetStartYear') || 2566, 10) || 2566;
+                    const reportBudgetYears = Array.from({length:5}, (_,i) => reportStartYear + i);
                     
                     let rowsHtml = '';
                     let projectImageSections = '';
@@ -1612,7 +1654,7 @@
                         }
                     });
 
-                    const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>พิมพ์รายงาน</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet"><style>@page{size:A4 landscape;margin:10mm;}html{background:#e5e7eb;}body{box-sizing:border-box;width:277mm;margin:10mm auto;background:white;font-family:'Sarabun',sans-serif;font-size:12px;}table{width:100%;border-collapse:collapse;margin-top:15px;table-layout:fixed;}th,td{border:1px solid #000;padding:4px 3px;vertical-align:top;overflow-wrap:anywhere;}th{text-align:center;font-weight:bold;background-color:#e2e8f0;}h2,h3{text-align:center;margin:5px;}h2{font-size:18px;}h3{font-size:16px;}.sig-box{float:right;margin-top:40px;margin-right:40px;font-size:12px;}.sig-row{display:flex;align-items:flex-end;margin-bottom:8px;justify-content:flex-end;}.sig-label{text-align:right;margin-right:10px;width:80px;}.sig-dot{text-align:center;min-width:200px;border-bottom:1px dotted #000;}thead{display:table-header-group;}tr{break-inside:avoid;page-break-inside:avoid;}tbody td:nth-child(n+6):nth-child(-n+10){font-family:Arial,sans-serif;font-size:10px;font-variant-numeric:tabular-nums;text-align:right;overflow-wrap:anywhere;} .sig-box{break-inside:avoid;page-break-inside:avoid;}@media print{html{background:white;}body{width:277mm;margin:0;}th{print-color-adjust:exact;-webkit-print-color-adjust:exact;}}</style></head><body onload="prepareReportPrint()"><h2>แบบสรุปรายละเอียดโครงการที่เสนอขอประสานแผน</h2><h3>องค์การบริหารส่วนจังหวัดพิษณุโลก</h3><table><colgroup><col style="width:9mm"><col style="width:25mm"><col style="width:36mm"><col style="width:30mm"><col style="width:39mm"><col span="5" style="width:18mm"><col style="width:48mm"></colgroup><thead><tr><th rowspan="2">ลำดับที่</th><th rowspan="2">ชื่อหน่วยงาน<br>ที่ขอประสาน</th><th colspan="2">ชื่อโครงการ</th><th rowspan="2">รายละเอียดโครงการ</th><th colspan="5">งบประมาณที่เสนอขอ (บาท)</th><th rowspan="2">ผลการตรวจสอบพื้นที่</th></tr><tr><th>(ชื่อเดิม ของ อปท.)</th><th>(ชื่อที่ขอเปลี่ยนแปลง)</th><th>2566</th><th>2567</th><th>2568</th><th>2569</th><th>2570</th></tr></thead><tbody>${rowsHtml}</tbody></table><div class="sig-box"><div class="sig-row"><div class="sig-label">ลงชื่อ</div><div class="sig-dot"></div><div>ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label"></div><div class="sig-dot" style="border-bottom:none">(${iName})</div><div style="color:transparent">ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label">ตำแหน่ง</div><div class="sig-dot" style="border-bottom:none">${iPos}</div><div style="color:transparent">ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label">วันที่ตรวจสอบ</div><div class="sig-dot">......... / ......... / .............</div><div style="color:transparent">ผู้ตรวจสอบพื้นที่</div></div></div>${projectImageSections}<script>function fitReportAmounts(){document.querySelectorAll("tbody td:nth-child(n+6):nth-child(-n+10)").forEach(function(cell){cell.style.fontSize="10px";cell.style.whiteSpace="nowrap";var size=10;while(cell.scrollWidth>cell.clientWidth && size>8){size-=0.25;cell.style.fontSize=size+"px";}if(cell.scrollWidth>cell.clientWidth)cell.style.whiteSpace="normal";});}async function prepareReportPrint(){if(document.fonts)await document.fonts.ready;await Promise.all(Array.from(document.images).map(function(img){if(img.complete)return Promise.resolve();return new Promise(function(resolve){img.addEventListener("load",resolve,{once:true});img.addEventListener("error",resolve,{once:true});setTimeout(resolve,5000);});}));fitReportAmounts();requestAnimationFrame(function(){requestAnimationFrame(function(){window.print();});});}window.addEventListener("beforeprint",fitReportAmounts);<\/script></body></html>`;
+                    const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>พิมพ์รายงาน</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet"><style>@page{size:A4 landscape;margin:10mm;}html{background:#e5e7eb;}body{box-sizing:border-box;width:277mm;margin:10mm auto;background:white;font-family:'Sarabun',sans-serif;font-size:12px;}table{width:100%;border-collapse:collapse;margin-top:15px;table-layout:fixed;}th,td{border:1px solid #000;padding:4px 3px;vertical-align:top;overflow-wrap:anywhere;}th{text-align:center;font-weight:bold;background-color:#e2e8f0;}h2,h3{text-align:center;margin:5px;}h2{font-size:18px;}h3{font-size:16px;}.sig-box{float:right;margin-top:40px;margin-right:40px;font-size:12px;}.sig-row{display:flex;align-items:flex-end;margin-bottom:8px;justify-content:flex-end;}.sig-label{text-align:right;margin-right:10px;width:80px;}.sig-dot{text-align:center;min-width:200px;border-bottom:1px dotted #000;}thead{display:table-header-group;}tr{break-inside:avoid;page-break-inside:avoid;}tbody td:nth-child(n+6):nth-child(-n+10){font-family:Arial,sans-serif;font-size:10px;font-variant-numeric:tabular-nums;text-align:right;overflow-wrap:anywhere;} .sig-box{break-inside:avoid;page-break-inside:avoid;}@media print{html{background:white;}body{width:277mm;margin:0;}th{print-color-adjust:exact;-webkit-print-color-adjust:exact;}}</style></head><body onload="prepareReportPrint()"><h2>แบบสรุปรายละเอียดโครงการที่เสนอขอประสานแผน</h2><h3>องค์การบริหารส่วนจังหวัดพิษณุโลก</h3><table><colgroup><col style="width:9mm"><col style="width:25mm"><col style="width:36mm"><col style="width:30mm"><col style="width:39mm"><col span="5" style="width:18mm"><col style="width:48mm"></colgroup><thead><tr><th rowspan="2">ลำดับที่</th><th rowspan="2">ชื่อหน่วยงาน<br>ที่ขอประสาน</th><th colspan="2">ชื่อโครงการ</th><th rowspan="2">รายละเอียดโครงการ</th><th colspan="5">งบประมาณที่เสนอขอ (บาท)</th><th rowspan="2">ผลการตรวจสอบพื้นที่</th></tr><tr><th>(ชื่อเดิม ของ อปท.)</th><th>(ชื่อที่ขอเปลี่ยนแปลง)</th>${reportBudgetYears.map(year => `<th>${year}</th>`).join('')}</tr></thead><tbody>${rowsHtml}</tbody></table><div class="sig-box"><div class="sig-row"><div class="sig-label">ลงชื่อ</div><div class="sig-dot"></div><div>ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label"></div><div class="sig-dot" style="border-bottom:none">(${iName})</div><div style="color:transparent">ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label">ตำแหน่ง</div><div class="sig-dot" style="border-bottom:none">${iPos}</div><div style="color:transparent">ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label">วันที่ตรวจสอบ</div><div class="sig-dot">......... / ......... / .............</div><div style="color:transparent">ผู้ตรวจสอบพื้นที่</div></div></div>${projectImageSections}<script>function fitReportAmounts(){document.querySelectorAll("tbody td:nth-child(n+6):nth-child(-n+10)").forEach(function(cell){cell.style.fontSize="10px";cell.style.whiteSpace="nowrap";var size=10;while(cell.scrollWidth>cell.clientWidth && size>8){size-=0.25;cell.style.fontSize=size+"px";}if(cell.scrollWidth>cell.clientWidth)cell.style.whiteSpace="normal";});}async function prepareReportPrint(){if(document.fonts)await document.fonts.ready;await Promise.all(Array.from(document.images).map(function(img){if(img.complete)return Promise.resolve();return new Promise(function(resolve){img.addEventListener("load",resolve,{once:true});img.addEventListener("error",resolve,{once:true});setTimeout(resolve,5000);});}));fitReportAmounts();requestAnimationFrame(function(){requestAnimationFrame(function(){window.print();});});}window.addEventListener("beforeprint",fitReportAmounts);<\/script></body></html>`;
                     const w = window.open('','_blank'); w.document.write(html); w.document.close();
                 },
                 openAnalyze() { App.ui.openModal('analyzeModal'); },
@@ -1793,6 +1835,10 @@
                     const coordinationProjects = App.state.proposals.filter(x => x.projectType !== 'ordinance');
                     const t=coordinationProjects.length; const a=coordinationProjects.filter(p=>p.status==='เหมาะสม').length; const p=coordinationProjects.filter(p=>p.status==='รอพิจารณา').length;
                     document.getElementById('dashTotalProjects').innerText = t; document.getElementById('dashApproved').innerText = a; document.getElementById('dashPending').innerText = p;
+                    const dashboardStartYear = parseInt(localStorage.getItem('planBudgetStartYear') || document.getElementById('budgetStartYear')?.value || 2566, 10) || 2566;
+                    const dashboardBudgetYear = dashboardStartYear + 3;
+                    document.getElementById('dashboardBudgetYearLabel').innerText = `รวมงบปี ${dashboardBudgetYear}`;
+                    document.getElementById('chartBudgetYearTitle').innerText = `งบประมาณปี ${dashboardBudgetYear} แยกตามอำเภอ`;
                     let tb=0; coordinationProjects.forEach(pr=>{ if(pr.budget&&pr.budget.b2569) tb+=parseFloat(pr.budget.b2569.replace(/,/g,'')||0); });
                     document.getElementById('dashTotalBudget').innerText = '฿'+tb.toLocaleString();
                     this.renderCharts(); App.ui.openModal('dashboardModal'); 
@@ -1807,7 +1853,9 @@
                     App.state.charts.budgetChart = new Chart(ctxB, { type: 'doughnut', data: { labels:lbls, datasets:[{data:lbls.map(l=>dBg[l]), backgroundColor:['#ef4444','#f97316','#f59e0b','#84cc16','#10b981','#06b6d4','#3b82f6','#8b5cf6','#d946ef']}] }, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right',labels:{font:{family:'Sarabun'}}}}} });
                 },
                 exportCSV() {
-                    let csv = '\uFEFFอำเภอ,หน่วยงาน,ชื่อโครงการ,งบ2566,งบ2567,งบ2568,งบ2569,งบ2570,สถานะ\n';
+                    const csvStartYear = parseInt(localStorage.getItem('planBudgetStartYear') || document.getElementById('budgetStartYear')?.value || 2566, 10) || 2566;
+                    const csvYears = Array.from({length:5}, (_,i) => csvStartYear + i);
+                    let csv = `\uFEFFอำเภอ,หน่วยงาน,ชื่อโครงการ,${csvYears.map(year => `งบ${year}`).join(',')},สถานะ\n`;
                     App.state.proposals.filter(p => p.projectType !== 'ordinance').forEach(p => { csv += `"${p.district||''}","${p.agencyName||''}","${p.projectNameNew||p.projectNameOld||''}","${p.budget?.b2566||0}","${p.budget?.b2567||0}","${p.budget?.b2568||0}","${p.budget?.b2569||0}","${p.budget?.b2570||0}","${p.status||''}"\n`; });
                     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob);
                     const link = document.createElement("a"); link.setAttribute("href", url); link.setAttribute("download", "proposals.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link);
@@ -1943,7 +1991,8 @@
 
                         const d = { 
                             seqNo:document.getElementById('seqNo').value, district:dist, agencyName:agc, 
-                            projectNameOld:projectNameOldValue, projectNameNew:projectNameNewValue, 
+                            projectNameOld:projectNameOldValue, projectNameNew:projectNameNewValue,
+                            budgetType:document.getElementById('budgetType').value,
                             projectDetails:document.getElementById('projectDetails').value, 
                             coordinates:{
                                 startLat: parseCoord(document.getElementById('startLatInput').value), startLng: parseCoord(document.getElementById('startLngInput').value), 
@@ -1951,6 +2000,8 @@
                             }, 
                             lineStyle:document.getElementById('lineStyle').value, lineColor:document.getElementById('lineColor').value, lineWeight:parseInt(document.getElementById('lineWeight').value)||5, 
                             geoJSON:App.state.currentGeoJSON?JSON.stringify(App.state.currentGeoJSON):null, 
+                            budgetStartYear:parseInt(document.getElementById('budgetStartYear').value, 10) || 2566,
+                            budgetYears:Array.from({length:5}, (_,i) => (parseInt(document.getElementById('budgetStartYear').value, 10) || 2566) + i),
                             budget:{b2566:document.getElementById('budget2566').value,b2567:document.getElementById('budget2567').value,b2568:document.getElementById('budget2568').value,b2569:document.getElementById('budget2569').value,b2570:document.getElementById('budget2570').value}, 
                             checklist:{chk1:document.getElementById('chk1').checked, chk2:document.getElementById('chk2').checked, chk3:document.getElementById('chk3').checked, chk4:document.getElementById('chk4').checked, chk5:document.getElementById('chk5').checked, otherText:oTxt}, 
                             inspectorName:document.getElementById('inspectorName').value, inspectorPosition:document.getElementById('inspectorPosition').value, inspectionDate:document.getElementById('inspectionDate').value, 
