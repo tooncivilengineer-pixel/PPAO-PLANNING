@@ -161,8 +161,25 @@
             </button>
         </div>
         
-        <!-- Coordinate Display (Bottom Left) -->
-        <div class="absolute bottom-6 left-6 z-[500] bg-white/95 backdrop-blur-sm p-2.5 rounded shadow-md border border-gray-200 w-48 pointer-events-auto">
+        <!-- Map Project Filter (Bottom Left) -->
+        <div class="absolute bottom-6 left-6 z-[500] bg-white/95 backdrop-blur-sm p-3 rounded-lg shadow-md border border-indigo-200 w-64 pointer-events-auto">
+            <div class="flex items-center justify-between mb-2 border-b border-indigo-100 pb-2">
+                <span class="font-bold text-indigo-800 text-xs"><i class="fa-solid fa-filter mr-1.5"></i>กรองโครงการบนแผนที่</span>
+                <button type="button" onclick="App.ui.clearMapProjectFilter()" class="text-[10px] font-bold text-gray-500 hover:text-red-600" title="ล้างตัวกรอง"><i class="fa-solid fa-filter-circle-xmark mr-1"></i>ล้าง</button>
+            </div>
+            <div class="grid grid-cols-1 gap-2">
+                <select id="mapDistrictFilter" onchange="App.ui.updateMapDistrictFilter()" class="w-full border border-gray-300 rounded-md px-2.5 py-1.5 text-xs bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="">ทุกอำเภอ</option>
+                </select>
+                <select id="mapSubdistrictFilter" onchange="App.ui.applyMapSubdistrictFilter()" disabled class="w-full border border-gray-300 rounded-md px-2.5 py-1.5 text-xs bg-white focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-gray-100 disabled:text-gray-400">
+                    <option value="">เลือกอำเภอก่อน</option>
+                </select>
+            </div>
+            <div id="mapFilterResultCount" class="mt-2 text-[10px] text-indigo-700 font-bold text-center bg-indigo-50 rounded px-2 py-1">แสดงทุกโครงการ</div>
+        </div>
+
+        <!-- Coordinate Display (Bottom Right; leaves space for zoom controls) -->
+        <div class="absolute bottom-6 right-16 z-[500] bg-white/95 backdrop-blur-sm p-2.5 rounded shadow-md border border-gray-200 w-48 pointer-events-auto">
             <div class="flex items-center justify-between mb-1.5 border-b border-gray-300 pb-1">
                 <span class="font-bold text-gray-800 text-xs">ระบบพิกัด</span>
                 <select id="coordSystem" class="bg-gray-50 border border-gray-300 text-gray-900 text-[10px] rounded cursor-pointer p-0.5 outline-none">
@@ -317,16 +334,15 @@
     <div id="districtSummaryModal" class="fixed inset-0 bg-gray-900/60 z-[3400] hidden items-center justify-center p-2 md:p-4 backdrop-blur-sm transition-opacity">
         <div class="bg-slate-50 rounded-xl shadow-2xl w-full max-w-[96vw] h-[92vh] flex flex-col overflow-hidden">
             <div class="bg-purple-700 text-white px-5 py-4 flex justify-between items-center shrink-0 shadow-sm z-10">
-                <h3 class="font-bold text-lg flex items-center"><i class="fa-solid fa-table-list mr-2"></i> สรุปข้อมูลโครงการแยกรายอำเภอ</h3>
+                <h3 class="font-bold text-lg flex items-center"><i class="fa-solid fa-table-list mr-2"></i> สรุปโครงการแยกอำเภอ ตำบล และปีงบประมาณ</h3>
                 <button onclick="App.ui.closeModal('districtSummaryModal')" class="text-purple-100 hover:text-white bg-purple-800 hover:bg-purple-900 rounded-full w-8 h-8 flex items-center justify-center" aria-label="ปิดหน้าต่าง"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="p-4 md:p-5 flex-1 overflow-y-auto custom-scroll">
                 <div class="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-4">
-                    <label for="districtSummaryFilter" class="block text-xs font-bold text-purple-900 mb-1">เลือกอำเภอที่ต้องการสรุป</label>
-                    <div class="flex flex-col md:flex-row gap-3">
-                        <select id="districtSummaryFilter" onchange="App.features.renderDistrictSummary()" class="flex-1 bg-white border border-purple-300 rounded-lg px-4 py-2.5 font-bold text-purple-900 outline-none focus:ring-2 focus:ring-purple-500">
-                            <option value="">ทุกอำเภอ</option>
-                        </select>
+                    <div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-[1fr_1fr_220px_auto] gap-3 items-end">
+                        <div><label for="districtSummaryFilter" class="block text-xs font-bold text-purple-900 mb-1">อำเภอ</label><select id="districtSummaryFilter" onchange="App.features.updateDistrictSummaryFilters('district')" class="w-full bg-white border border-purple-300 rounded-lg px-4 py-2.5 font-bold text-purple-900 outline-none focus:ring-2 focus:ring-purple-500"><option value="">ทุกอำเภอ</option></select></div>
+                        <div><label for="districtSummarySubdistrictFilter" class="block text-xs font-bold text-purple-900 mb-1">ตำบล</label><select id="districtSummarySubdistrictFilter" onchange="App.features.updateDistrictSummaryFilters('subdistrict')" disabled class="w-full bg-white border border-purple-300 rounded-lg px-4 py-2.5 font-bold text-purple-900 outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100 disabled:text-gray-400"><option value="">เลือกอำเภอก่อน</option></select></div>
+                        <div><label for="districtSummaryYearFilter" class="block text-xs font-bold text-purple-900 mb-1">ปีงบประมาณ</label><select id="districtSummaryYearFilter" onchange="App.features.renderDistrictSummary()" class="w-full bg-white border border-purple-300 rounded-lg px-4 py-2.5 font-bold text-purple-900 outline-none focus:ring-2 focus:ring-purple-500"><option value="">ทุกปีงบประมาณ</option></select></div>
                         <button onclick="App.features.printDistrictSummary()" class="bg-purple-700 hover:bg-purple-800 text-white font-bold px-6 py-2.5 rounded-lg shadow-md whitespace-nowrap"><i class="fa-solid fa-print mr-2"></i>พิมพ์สรุป A4</button>
                     </div>
                 </div>
@@ -334,7 +350,7 @@
                 <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-4">
                     <div class="bg-white border border-purple-200 rounded-xl p-4"><div class="text-[11px] text-gray-500"><i class="fa-solid fa-diagram-project mr-1"></i>โครงการ</div><div id="summaryProjectCount" class="font-black text-xl text-purple-800 mt-1">0 โครงการ</div></div>
                     <div class="bg-white border border-gray-200 rounded-xl p-4"><div class="text-[11px] text-gray-500"><i class="fa-solid fa-building mr-1"></i>หน่วยงานเสนอ</div><div id="summaryAgencyCount" class="font-black text-xl text-gray-800 mt-1">0 แห่ง</div></div>
-                    <div class="bg-white border border-gray-200 rounded-xl p-4"><div class="text-[11px] text-gray-500"><i class="fa-solid fa-ruler-horizontal mr-1"></i>ระยะทางตามรายละเอียด</div><div id="summaryRequestedDistance" class="font-black text-lg text-gray-800 mt-1">0.000 กม.</div></div>
+                    <div class="bg-white border border-gray-200 rounded-xl p-4"><div class="text-[11px] text-gray-500"><i class="fa-solid fa-ruler-horizontal mr-1"></i>ระยะทางที่เสนอของบประมาณ</div><div id="summaryRequestedDistance" class="font-black text-lg text-gray-800 mt-1">0.000 กม.</div></div>
                     <div class="bg-blue-50 border border-blue-200 rounded-xl p-4"><div class="text-[11px] text-gray-500"><i class="fa-solid fa-route mr-1"></i>ระยะทางบนแผนที่</div><div id="summaryMapDistance" class="font-black text-lg text-blue-800 mt-1">0.000 กม.</div></div>
                     <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4"><div class="text-[11px] text-gray-500"><i class="fa-solid fa-circle-check mr-1"></i>ได้รับการคัดเลือก</div><div id="summarySelectedCount" class="font-black text-xl text-emerald-800 mt-1">0 โครงการ</div></div>
                     <div class="bg-amber-50 border border-amber-300 rounded-xl p-4"><div class="text-[11px] text-gray-500"><i class="fa-solid fa-coins mr-1"></i>งบประมาณรวม</div><div id="summaryBudgetTotal" class="font-black text-lg text-amber-900 mt-1">0 บาท</div></div>
@@ -343,9 +359,9 @@
                 <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
                     <div class="px-4 py-3 border-b bg-gray-50 flex justify-between items-center"><h4 class="font-bold text-gray-800"><i class="fa-solid fa-list-check mr-2 text-purple-600"></i>รายละเอียดโครงการ</h4><span id="summaryResultText" class="text-xs text-gray-500">0 รายการ</span></div>
                     <div class="overflow-auto max-h-[48vh]">
-                        <table class="w-full text-xs border-collapse min-w-[1320px]">
+                        <table class="w-full text-xs border-collapse min-w-[1480px]">
                             <thead class="sticky top-0 z-10 bg-purple-50 text-purple-900">
-                                <tr><th class="p-3 border-b text-center w-14">ลำดับ</th><th class="p-3 border-b text-left">อำเภอ / หน่วยงาน</th><th class="p-3 border-b text-left">ชื่อโครงการ</th><th class="p-3 border-b text-left">ประเภทเงิน</th><th class="p-3 border-b text-right">ระยะตามรายละเอียด</th><th class="p-3 border-b text-right">ระยะบนแผนที่</th><th class="p-3 border-b text-right">งบประมาณ</th><th class="p-3 border-b text-left">ผลตรวจสอบพื้นที่</th><th class="p-3 border-b text-left">ขั้นตอน</th></tr>
+                                <tr><th class="p-3 border-b text-center w-14">ลำดับ</th><th class="p-3 border-b text-left">อำเภอ / หน่วยงาน</th><th class="p-3 border-b text-left">ตำบล</th><th class="p-3 border-b text-center">ปีงบประมาณ</th><th class="p-3 border-b text-left">ชื่อโครงการ</th><th class="p-3 border-b text-left">ประเภทเงิน</th><th class="p-3 border-b text-right">ระยะทางที่เสนอของบประมาณ</th><th class="p-3 border-b text-right">ระยะบนแผนที่</th><th class="p-3 border-b text-right">งบประมาณ</th><th class="p-3 border-b text-left">ผลตรวจสอบพื้นที่</th><th class="p-3 border-b text-left">ขั้นตอน</th></tr>
                             </thead>
                             <tbody id="districtSummaryBody"></tbody>
                         </table>
@@ -474,6 +490,11 @@
                                             <div id="distanceDisplay" class="hidden items-center gap-1 border-l pl-3">
                                                 <i class="fa-solid fa-ruler text-sky-600"></i><span class="text-[10px] font-bold text-gray-600">ระยะทางบนแผนที่:</span>
                                                 <input type="text" id="calculatedDistance" readonly class="w-16 bg-transparent text-sky-700 font-bold text-xs text-right outline-none" value="-">
+                                                <span class="text-[10px] font-bold text-gray-600">ม.</span>
+                                            </div>
+                                            <div class="flex items-center gap-1 border-l pl-3">
+                                                <i class="fa-solid fa-road text-amber-600"></i><label for="requestedBudgetDistance" class="text-[10px] font-bold text-gray-600 whitespace-nowrap">ระยะทางที่เสนอของบประมาณ:</label>
+                                                <input type="number" id="requestedBudgetDistance" min="0" step="0.01" class="w-24 border rounded px-2 py-1 text-amber-700 font-bold text-xs text-right outline-none focus:ring-2 focus:ring-amber-300" placeholder="0.00">
                                                 <span class="text-[10px] font-bold text-gray-600">ม.</span>
                                             </div>
                                         </div>
@@ -775,7 +796,7 @@
                 spatialLayerNames: {}, spatialResults: [], spatialDisplayLayer: null, spatialHighlightLayer: null,
                 forestLayer: null, forestFeatureLayers: new Map(), forestVisible: false,
                 spkGeoJSON: null, spkLayer: null, spkFeatureIndex: [], spkVisible: false,
-                searchDistrict: ''
+                searchDistrict: '', mapFilterDistrict: '', mapFilterSubdistrict: ''
             },
             
             forest: {
@@ -1129,9 +1150,11 @@
                 init() {
                     const dSelect = document.getElementById('districtInput'); const dMenu = document.getElementById('districtListContainer');
                     const aSelect = document.getElementById('analyzeDistrictFilter');
+                    const mapDistrictSelect = document.getElementById('mapDistrictFilter');
                     Object.keys(ORG_DATA).forEach(d => {
                         if(dSelect) dSelect.innerHTML += `<option value="${d}">${d}</option>`;
                         if(aSelect) aSelect.innerHTML += `<option value="${d}">${d}</option>`;
+                        if(mapDistrictSelect) mapDistrictSelect.innerHTML += `<option value="${d}">${d}</option>`;
                         if(dMenu) dMenu.innerHTML += `<button onclick="App.features.search('${d}')" class="bg-white hover:bg-blue-50 text-gray-600 border border-gray-200 py-2 px-3 rounded text-xs text-left w-full mt-1"><i class="fa-solid fa-caret-right mr-2"></i> ${d}</button>`;
                     });
                     document.getElementById('coordSystem').addEventListener('change', App.ui.updateCoordDisplay);
@@ -1171,6 +1194,53 @@
                     const agency = document.getElementById('agencyName');
                     if(!input || !agency || (!force && input.value.trim())) return;
                     input.value = this.extractSubdistrict(agency.value);
+                },
+                refreshMapSubdistrictOptions() {
+                    const districtSelect = document.getElementById('mapDistrictFilter');
+                    const subdistrictSelect = document.getElementById('mapSubdistrictFilter');
+                    if(!districtSelect || !subdistrictSelect) return;
+                    const district = districtSelect.value || App.state.mapFilterDistrict || '';
+                    App.state.mapFilterDistrict = district;
+                    if(!district) {
+                        App.state.mapFilterSubdistrict = '';
+                        subdistrictSelect.innerHTML = '<option value="">เลือกอำเภอก่อน</option>';
+                        subdistrictSelect.disabled = true;
+                        return;
+                    }
+                    const current = App.state.mapFilterSubdistrict || '';
+                    const subdistricts = [...new Set(App.state.proposals
+                        .filter(p => p.projectType !== 'ordinance' && p.district === district)
+                        .map(p => this.getSubdistrict(p)).filter(Boolean))]
+                        .sort((a,b) => a.localeCompare(b, 'th'));
+                    subdistrictSelect.disabled = false;
+                    subdistrictSelect.innerHTML = '<option value="">ทุกตำบลในอำเภอนี้</option>' + subdistricts.map(value => `<option value="${this.escapeHtml(value)}">ต.${this.escapeHtml(value)}</option>`).join('');
+                    if(subdistricts.includes(current)) subdistrictSelect.value = current;
+                    else App.state.mapFilterSubdistrict = '';
+                },
+                updateMapDistrictFilter() {
+                    App.state.mapFilterDistrict = document.getElementById('mapDistrictFilter')?.value || '';
+                    App.state.mapFilterSubdistrict = '';
+                    this.refreshMapSubdistrictOptions();
+                    App.map.drawMarkers();
+                },
+                applyMapSubdistrictFilter() {
+                    App.state.mapFilterSubdistrict = document.getElementById('mapSubdistrictFilter')?.value || '';
+                    App.map.drawMarkers();
+                },
+                clearMapProjectFilter() {
+                    App.state.mapFilterDistrict = '';
+                    App.state.mapFilterSubdistrict = '';
+                    const districtSelect = document.getElementById('mapDistrictFilter');
+                    if(districtSelect) districtSelect.value = '';
+                    this.refreshMapSubdistrictOptions();
+                    App.map.drawMarkers();
+                },
+                updateMapFilterResultCount(visibleCount, totalCount) {
+                    const el = document.getElementById('mapFilterResultCount');
+                    if(!el) return;
+                    const district = App.state.mapFilterDistrict;
+                    const subdistrict = App.state.mapFilterSubdistrict;
+                    el.textContent = district || subdistrict ? `แสดง ${visibleCount} จาก ${totalCount} โครงการ` : `แสดงทุกโครงการ (${totalCount})`;
                 },
                 refreshSearchFilters() {
                     const subSelect = document.getElementById('searchSubdistrictFilter');
@@ -1515,7 +1585,15 @@
                 drawMarkers() {
                     App.state.kmlLayer.clearLayers();
                     App.state.kmlPolygonLayer?.clearLayers();
-                    App.state.proposals.filter(p => p.projectType !== 'ordinance').forEach(p => {
+                    App.ui.refreshMapSubdistrictOptions();
+                    const allProjects = App.state.proposals.filter(p => p.projectType !== 'ordinance');
+                    const visibleProjects = allProjects.filter(p => {
+                        if(App.state.mapFilterDistrict && p.district !== App.state.mapFilterDistrict) return false;
+                        if(App.state.mapFilterSubdistrict && App.ui.getSubdistrict(p) !== App.state.mapFilterSubdistrict) return false;
+                        return true;
+                    });
+                    App.ui.updateMapFilterResultCount(visibleProjects.length, allProjects.length);
+                    visibleProjects.forEach(p => {
                         const isSyncOk = App.features.checkGeometrySync(p);
                         const selectionInfo = App.ui.getSelectionInfo(p);
                         const selectionBadge = App.ui.getSelectionBadge(p, true);
@@ -1533,7 +1611,7 @@
                             const d = App.features.calculateLength(pGeo);
                             
                             const projectName = App.ui.escapeHtml(App.ui.getProjectName(p) || 'ไม่มีชื่อโครงการ');
-                            const requestedDistance = App.features.extractDistanceFromString(p.projectDetails) || 0;
+                            const requestedDistance = App.features.getRequestedBudgetDistance(p);
                             const routeCoords = App.roadMeasure.extractLineCoordinates(pGeo);
                             const firstRouteCoord = routeCoords[0] || [];
                             const lastRouteCoord = routeCoords.at(-1) || [];
@@ -1699,7 +1777,7 @@
                     if(!start.every(Number.isFinite)||!end.every(Number.isFinite))return App.ui.showToast('พิกัดเริ่มต้นหรือสิ้นสุดเดิมไม่สมบูรณ์','error');
                     this.original=JSON.parse(JSON.stringify(geo)); this.lockedEndpoints=true; this.lockedStart=[...start]; this.lockedEnd=[...end]; this.points=[[...start],[...end]]; this.result=null;
                     this.open({editingId:id});
-                    const requested=App.features.extractDistanceFromString(project.projectDetails) || App.features.calculateLength(geo);
+                    const requested=App.features.getRequestedBudgetDistance(project) || App.features.calculateLength(geo);
                     document.getElementById('rmLength').value=Math.max(1,Math.round(requested));
                     document.getElementById('rmMode').value='road';
                     this.updatePointLimitHint();
@@ -2020,6 +2098,11 @@
                         return val;
                     }
                     return null;
+                },
+                getRequestedBudgetDistance(project) {
+                    const explicit = parseFloat(String(project?.requestedBudgetDistance ?? '').replace(/,/g, ''));
+                    if(Number.isFinite(explicit) && explicit >= 0) return explicit;
+                    return this.extractDistanceFromString(project?.projectDetails) || 0;
                 },
                 checkGeometrySync(p) {
                     if (!p.geoJSON || !p.coordinates || (!p.coordinates.startLat && !p.coordinates.endLat)) return true;
@@ -2388,18 +2471,18 @@
                     const forestDetail = App.forest.renderProjectResult(App.forest.analyzeProject(p), true);
                     const spkDetail = App.spk.renderProjectResult(App.spk.analyzeProject(p));
                     
-                    const docDist = App.features.extractDistanceFromString(p.projectDetails);
+                    const docDist = App.features.getRequestedBudgetDistance(p) || null;
                     let distCompareHtml = '';
                     if (docDist !== null && d > 0) {
                         const diff = Math.abs(docDist - d);
                         const pct = (diff / docDist) * 100;
                         if (pct <= 15) {
-                            distCompareHtml = `<div class="bg-emerald-50 text-emerald-700 p-3 rounded-lg border border-emerald-200 mt-3 text-sm flex gap-3 items-start"><i class="fa-solid fa-circle-check mt-0.5 text-lg"></i><div><strong class="block">ระยะทางสอดคล้องกัน</strong>ตรวจพบความยาวในรายละเอียด: <b>${docDist.toLocaleString()} ม.</b><br>วัดจากแผนที่ได้: <b>${d.toLocaleString('en-US',{maximumFractionDigits:2})} ม.</b><br><span class="text-xs opacity-80">(คลาดเคลื่อน ${pct.toFixed(1)}% - อยู่ในเกณฑ์ที่ยอมรับได้)</span></div></div>`;
+                            distCompareHtml = `<div class="bg-emerald-50 text-emerald-700 p-3 rounded-lg border border-emerald-200 mt-3 text-sm flex gap-3 items-start"><i class="fa-solid fa-circle-check mt-0.5 text-lg"></i><div><strong class="block">ระยะทางสอดคล้องกัน</strong>ระยะทางที่เสนอของบประมาณ: <b>${docDist.toLocaleString()} ม.</b><br>วัดจากแผนที่ได้: <b>${d.toLocaleString('en-US',{maximumFractionDigits:2})} ม.</b><br><span class="text-xs opacity-80">(คลาดเคลื่อน ${pct.toFixed(1)}% - อยู่ในเกณฑ์ที่ยอมรับได้)</span></div></div>`;
                         } else {
-                            distCompareHtml = `<div class="bg-orange-50 text-orange-700 p-3 rounded-lg border border-orange-200 mt-3 text-sm flex gap-3 items-start"><i class="fa-solid fa-triangle-exclamation mt-0.5 text-lg"></i><div><strong class="block text-red-700">ระยะทางคลาดเคลื่อนเกิน 15%</strong>ตรวจพบความยาวในรายละเอียด: <b>${docDist.toLocaleString()} ม.</b><br>วัดจากแผนที่ได้: <b class="text-red-700">${d.toLocaleString('en-US',{maximumFractionDigits:2})} ม.</b><br><span class="text-xs opacity-80 font-bold">(คลาดเคลื่อน ${pct.toFixed(1)}% - โปรดตรวจสอบแนวเส้นทางหรือข้อมูลในเอกสาร)</span></div></div>`;
+                            distCompareHtml = `<div class="bg-orange-50 text-orange-700 p-3 rounded-lg border border-orange-200 mt-3 text-sm flex gap-3 items-start"><i class="fa-solid fa-triangle-exclamation mt-0.5 text-lg"></i><div><strong class="block text-red-700">ระยะทางคลาดเคลื่อนเกิน 15%</strong>ระยะทางที่เสนอของบประมาณ: <b>${docDist.toLocaleString()} ม.</b><br>วัดจากแผนที่ได้: <b class="text-red-700">${d.toLocaleString('en-US',{maximumFractionDigits:2})} ม.</b><br><span class="text-xs opacity-80 font-bold">(คลาดเคลื่อน ${pct.toFixed(1)}% - โปรดตรวจสอบแนวเส้นทางหรือข้อมูลในเอกสาร)</span></div></div>`;
                         }
                     } else if (docDist !== null && d === 0) {
-                         distCompareHtml = `<div class="bg-amber-50 text-amber-700 p-3 rounded-lg border border-amber-200 mt-3 text-sm flex gap-3 items-start"><i class="fa-solid fa-circle-info mt-0.5 text-lg"></i><div><strong class="block">พบระยะทางในเอกสาร แต่ไม่มีเส้นบนแผนที่</strong>ตรวจพบความยาว: <b>${docDist.toLocaleString()} ม.</b> โปรดวาดเส้นทางเพื่อตรวจสอบความถูกต้อง</div></div>`;
+                         distCompareHtml = `<div class="bg-amber-50 text-amber-700 p-3 rounded-lg border border-amber-200 mt-3 text-sm flex gap-3 items-start"><i class="fa-solid fa-circle-info mt-0.5 text-lg"></i><div><strong class="block">มีระยะทางที่เสนอของบประมาณ แต่ไม่มีเส้นบนแผนที่</strong>ระยะทางที่เสนอ: <b>${docDist.toLocaleString()} ม.</b> โปรดวาดเส้นทางเพื่อตรวจสอบความถูกต้อง</div></div>`;
                     }
                     
                     let attHtml = '';
@@ -2412,12 +2495,13 @@
                         attHtml += '</div></div>';
                     }
 
-                    document.getElementById('detailContent').innerHTML = `${warn}${selectionBanner}<div class="grid grid-cols-2 gap-3 text-sm"><div class="col-span-2 border-b pb-2 mb-2 flex justify-between items-center"><span class="font-bold">สถานะ:</span> <span class="bg-amber-100 px-2 py-1 rounded font-bold">${p.status||'รอพิจารณา'}</span> <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-bold">ลำดับที่ ${p.seqNo||1}</span></div><div><span class="text-gray-500 block text-xs">อำเภอ</span><div class="font-bold">${p.district||'-'}</div></div><div><span class="text-gray-500 block text-xs">ตำบล</span><div class="font-bold text-teal-700">${App.ui.escapeHtml(App.ui.getSubdistrict(p)||'-')}</div></div><div><span class="text-gray-500 block text-xs">หน่วยงานที่ขอ</span><div class="font-bold">${p.agencyName||'-'}</div></div><div><span class="text-gray-500 block text-xs">ปีที่ของบประมาณ</span><div class="font-bold text-violet-700">${App.ui.getBudgetRequestYears(p).join(', ')||'-'}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">ประเภทของงบประมาณ</span><div class="font-bold text-blue-800">${App.ui.escapeHtml(p.budgetType||'-')}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">ชื่อโครงการ</span><div class="font-medium">${App.ui.escapeHtml(App.ui.getProjectName(p)||'-')}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">รายละเอียดโครงการ</span><div>${p.projectDetails||'-'}</div>${distCompareHtml}</div><div class="col-span-2 bg-sky-50 p-3 rounded flex justify-between mt-2"><span class="font-bold text-sky-800 text-xs"><i class="fa-solid fa-ruler mr-2"></i>ระยะทางบนแผนที่:</span><span class="font-bold text-sky-700">${d>0?d.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' เมตร':'-'}</span></div><div class="col-span-2">${forestDetail}${spkDetail}</div>${attHtml}</div>`;
+                    const distanceCardsHtml = `<div class="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-2 mt-2"><div class="bg-amber-50 border border-amber-200 p-3 rounded flex justify-between"><span class="font-bold text-amber-800 text-xs"><i class="fa-solid fa-road mr-2"></i>ระยะทางที่เสนอของบประมาณ:</span><span class="font-bold text-amber-700">${docDist ? docDist.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' เมตร' : '-'}</span></div><div class="bg-sky-50 border border-sky-200 p-3 rounded flex justify-between"><span class="font-bold text-sky-800 text-xs"><i class="fa-solid fa-ruler mr-2"></i>ระยะทางบนแผนที่:</span><span class="font-bold text-sky-700">${d>0?d.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' เมตร':'-'}</span></div></div>`;
+                    document.getElementById('detailContent').innerHTML = `${warn}${selectionBanner}<div class="grid grid-cols-2 gap-3 text-sm"><div class="col-span-2 border-b pb-2 mb-2 flex justify-between items-center"><span class="font-bold">สถานะ:</span> <span class="bg-amber-100 px-2 py-1 rounded font-bold">${p.status||'รอพิจารณา'}</span> <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-bold">ลำดับที่ ${p.seqNo||1}</span></div><div><span class="text-gray-500 block text-xs">อำเภอ</span><div class="font-bold">${p.district||'-'}</div></div><div><span class="text-gray-500 block text-xs">ตำบล</span><div class="font-bold text-teal-700">${App.ui.escapeHtml(App.ui.getSubdistrict(p)||'-')}</div></div><div><span class="text-gray-500 block text-xs">หน่วยงานที่ขอ</span><div class="font-bold">${p.agencyName||'-'}</div></div><div><span class="text-gray-500 block text-xs">ปีที่ของบประมาณ</span><div class="font-bold text-violet-700">${App.ui.getBudgetRequestYears(p).join(', ')||'-'}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">ประเภทของงบประมาณ</span><div class="font-bold text-blue-800">${App.ui.escapeHtml(p.budgetType||'-')}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">ชื่อโครงการ</span><div class="font-medium">${App.ui.escapeHtml(App.ui.getProjectName(p)||'-')}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">รายละเอียดโครงการ</span><div>${p.projectDetails||'-'}</div>${distCompareHtml}</div>${distanceCardsHtml}<div class="col-span-2">${forestDetail}${spkDetail}</div>${attHtml}</div>`;
                     document.getElementById('btnEditProposal').onclick = () => { App.ui.closeModal('detailModal'); App.features.editProject(id); }; App.ui.openModal('detailModal');
                 },
                 editProject(id) {
                     const p = App.state.proposals.find(x => x.id === id); if(!p) return; this.clearForm(); App.state.editingId = id;
-                    document.getElementById('districtInput').value = p.district || ''; App.ui.updateAgencyList(); document.getElementById('seqNo').value = p.seqNo || ''; document.getElementById('agencyName').value = p.agencyName || ''; document.getElementById('subdistrictInput').value = App.ui.getSubdistrict(p); document.getElementById('projectNameOld').value = String(p.projectNameOld || (!String(p.projectNameNew||'').trim() ? App.ui.getProjectName(p) : '') || '').trim(); document.getElementById('projectNameNew').value = String(p.projectNameNew || '').trim(); document.getElementById('budgetType').value = p.budgetType || 'ข้อบัญญัติ'; App.ui.updateBudgetYears(p.budgetStartYear || 2566); document.getElementById('projectDetails').value = p.projectDetails || '';
+                    document.getElementById('districtInput').value = p.district || ''; App.ui.updateAgencyList(); document.getElementById('seqNo').value = p.seqNo || ''; document.getElementById('agencyName').value = p.agencyName || ''; document.getElementById('subdistrictInput').value = App.ui.getSubdistrict(p); document.getElementById('projectNameOld').value = String(p.projectNameOld || (!String(p.projectNameNew||'').trim() ? App.ui.getProjectName(p) : '') || '').trim(); document.getElementById('projectNameNew').value = String(p.projectNameNew || '').trim(); document.getElementById('budgetType').value = p.budgetType || 'ข้อบัญญัติ'; App.ui.updateBudgetYears(p.budgetStartYear || 2566); document.getElementById('projectDetails').value = p.projectDetails || ''; document.getElementById('requestedBudgetDistance').value = p.requestedBudgetDistance ?? '';
                     if(p.coordinates) { document.getElementById('startLatInput').value = p.coordinates.startLat || ''; document.getElementById('startLngInput').value = p.coordinates.startLng || ''; document.getElementById('endLatInput').value = p.coordinates.endLat || ''; document.getElementById('endLngInput').value = p.coordinates.endLng || ''; App.features.updateMapFromInput(true); }
                     if(p.utmCoordinates) {
                         document.getElementById('utmZone').value=String(p.utmCoordinates.zone||47); document.getElementById('utmHemisphere').value=p.utmCoordinates.hemisphere||'N';
@@ -2459,11 +2543,7 @@
 
                     const iName = document.getElementById('inspectorName').value || '................................................';
                     const iPos = document.getElementById('inspectorPosition').value || '................................................';
-                    const reportStartYear = parseInt(agencyProposals[0]?.budgetStartYear || localStorage.getItem('planBudgetStartYear') || 2566, 10) || 2566;
-                    const reportBudgetYears = Array.from({length:5}, (_,i) => reportStartYear + i);
-                    
                     let rowsHtml = '';
-                    let projectImageSections = '';
 
                     agencyProposals.forEach((p, index) => {
                         const displaySeq = index + 1; // บังคับรันเลข 1, 2, 3 ใหม่บนกระดาษเสมอ
@@ -2474,13 +2554,31 @@
                         const c5Html = `<div>${p.checklist?.chk5 ? '☑' : '☐'} 5. อื่นๆ${oTxtHtml}</div>`;
                         const forestText = App.ui.escapeHtml(App.forest.resultText(App.forest.analyzeProject(p)));
                         const spkText = App.ui.escapeHtml(App.spk.resultText(App.spk.analyzeProject(p)));
+                        const projectReportStartYear = parseInt(p.budgetStartYear || localStorage.getItem('planBudgetStartYear') || 2566, 10) || 2566;
+                        const projectReportYears = Array.isArray(p.budgetYears) && p.budgetYears.length >= 5 ? p.budgetYears : Array.from({length:5}, (_,i) => projectReportStartYear + i);
+                        const requestedProjectName = String(p.projectNameNew || '').trim();
+                        const requestedProjectNameHtml = requestedProjectName
+                            ? `<div class="changed-project-name"><span class="changed-project-label">ชื่อที่ขอเปลี่ยนแปลง</span>${App.ui.escapeHtml(requestedProjectName).replace(/\n/g,'<br>')}</div>`
+                            : '';
+                        const requestedBudgetDistance = App.features.getRequestedBudgetDistance(p);
+                        const requestedBudgetDistanceHtml = requestedBudgetDistance > 0 ? `<div class="requested-budget-distance"><b>ระยะทางที่เสนอของบประมาณ:</b> ${requestedBudgetDistance.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} เมตร</div>` : '';
+                        const projectImages = (Array.isArray(p.attachments) ? p.attachments : [])
+                            .filter(f => (f?.type && f.type.startsWith('image/')) || (typeof f?.url === 'string' && (f.url.startsWith('data:image/') || /\.(jpe?g|png|gif|webp)(\?|$)/i.test(f.url))))
+                            .map(f => ({ src: f.url || (f instanceof File ? URL.createObjectURL(f) : ''), name: f.name || 'ภาพถ่ายประกอบ' }))
+                            .filter(f => f.src)
+                            .slice(0, 6);
+                        const photoCount = projectImages.length;
+                        const projectPhotosHtml = photoCount
+                            ? `<div class="project-photos"><div class="project-photos-title">รูปถ่ายประกอบโครงการ</div><div class="project-photos-grid photo-count-${photoCount}">${projectImages.map((image, imgIdx) => `<figure><img src="${image.src}" alt="ภาพถ่ายประกอบ ${imgIdx + 1}"><figcaption>ภาพที่ ${imgIdx + 1}</figcaption></figure>`).join('')}</div></div>`
+                            : `<div class="project-photos project-photos-empty"><div>พื้นที่สำหรับรูปถ่ายประกอบโครงการ</div></div>`;
 
-                        rowsHtml += `<tr>
+                        rowsHtml += `<section class="project-page">
+                            <div class="report-heading"><h2>แบบสรุปรายละเอียดโครงการที่เสนอขอประสานแผน</h2><h3>องค์การบริหารส่วนจังหวัดพิษณุโลก</h3><div class="project-caption">โครงการลำดับที่ ${displaySeq} · อ.${App.ui.escapeHtml(p.district || '-')} · ${App.ui.escapeHtml(p.agencyName || '-')}</div></div>
+                            <table class="project-table"><colgroup><col style="width:8mm"><col style="width:26mm"><col style="width:76mm"><col style="width:46mm"><col span="5" style="width:15mm"><col style="width:46mm"></colgroup><thead><tr><th rowspan="2">ลำดับ<br>ที่</th><th rowspan="2">ชื่อหน่วยงาน<br>ที่ขอประสาน</th><th>ชื่อโครงการ</th><th rowspan="2">รายละเอียดโครงการ</th><th colspan="5">งบประมาณที่เสนอขอ (บาท)</th><th rowspan="2">ผลการตรวจสอบพื้นที่</th></tr><tr><th>(ชื่อเดิม ของ อปท.)</th>${projectReportYears.map(year => `<th>${year}</th>`).join('')}</tr></thead><tbody><tr>
                             <td style="text-align:center;">${displaySeq}</td>
                             <td style="text-align:center;">อ.${p.district || '-'}<br>(${p.agencyName || '-'})</td>
-                            <td>${(p.projectNameOld || '-').replace(/\n/g,'<br>')}</td>
-                            <td>${(p.projectNameNew || '-').replace(/\n/g,'<br>')}</td>
-                            <td>${(p.projectDetails || '-').replace(/\n/g,'<br>')}</td>
+                            <td>${(p.projectNameOld || '-').replace(/\n/g,'<br>')}${requestedProjectNameHtml}</td>
+                            <td>${requestedBudgetDistanceHtml}${(p.projectDetails || '-').replace(/\n/g,'<br>')}</td>
                             <td style="text-align:right;">${p.budget?.b2566 || '-'}</td>
                             <td style="text-align:right;">${p.budget?.b2567 || '-'}</td>
                             <td style="text-align:right;">${p.budget?.b2568 || '-'}</td>
@@ -2495,39 +2593,12 @@
                                 <div style="margin-top:5px;padding-top:4px;border-top:1px solid #999;font-size:10px;"><b>ตรวจสอบเขตป่า:</b><br>${forestText}</div>
                                 <div style="margin-top:4px;padding-top:4px;border-top:1px dotted #999;font-size:10px;"><b>ตรวจสอบเขต ส.ป.ก.:</b><br>${spkText}</div>
                             </td>
-                        </tr>`;
-
-                        if (p.attachments && p.attachments.length > 0) {
-                            let projectImages = [];
-                            p.attachments.forEach(f => {
-                                const src = f.url || (f instanceof File ? URL.createObjectURL(f) : null);
-                                if (src) projectImages.push(src);
-                            });
-
-                            if (projectImages.length > 0) {
-                                projectImageSections += `
-                                <div style="page-break-before: always; margin-top: 25px;">
-                                    <h3 style="font-size: 15px; color: #1e3a8a; border-bottom: 2px solid #1e3a8a; padding-bottom: 6px; margin-bottom: 15px; font-weight: bold;">
-                                        ภาพถ่ายประกอบโครงการ ลำดับที่ ${displaySeq}: ${p.projectNameNew || p.projectNameOld || 'ไม่มีชื่อโครงการ'} (อ.${p.district || '-'} - ${p.agencyName || '-'})
-                                    </h3>
-                                    <div style="display: flex; flex-wrap: wrap; gap: 15px;">`;
-                                
-                                projectImages.forEach((src, imgIdx) => {
-                                    projectImageSections += `
-                                        <div style="width: calc(33.33% - 10px); text-align: center; margin-bottom: 15px;">
-                                            <img src="${src}" style="max-width: 100%; height: 220px; object-fit: contain; border: 1px solid #cbd5e1; padding: 4px; background: #fff; border-radius: 4px;" />
-                                            <div style="font-size: 11px; color: #555; margin-top: 4px;">ภาพที่ ${imgIdx + 1} (ลำดับที่ ${displaySeq})</div>
-                                        </div>`;
-                                });
-
-                                projectImageSections += `
-                                    </div>
-                                </div>`;
-                            }
-                        }
+                        </tr></tbody></table>
+                            <div class="project-bottom">${projectPhotosHtml}<div class="sig-box"><div class="sig-row"><div class="sig-label">ลงชื่อ</div><div class="sig-dot"></div><div>ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label"></div><div class="sig-dot no-line">(${iName})</div><div class="sig-ghost">ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label">ตำแหน่ง</div><div class="sig-dot no-line">${iPos}</div><div class="sig-ghost">ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label">วันที่ตรวจสอบ</div><div class="sig-dot">......... / ......... / .............</div><div class="sig-ghost">ผู้ตรวจสอบพื้นที่</div></div></div></div>
+                        </section>`;
                     });
 
-                    const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>พิมพ์รายงาน</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet"><style>@page{size:A4 landscape;margin:10mm;}html{background:#e5e7eb;}body{box-sizing:border-box;width:277mm;margin:10mm auto;background:white;font-family:'Sarabun',sans-serif;font-size:12px;}table{width:100%;border-collapse:collapse;margin-top:15px;table-layout:fixed;}th,td{border:1px solid #000;padding:4px 3px;vertical-align:top;overflow-wrap:anywhere;}th{text-align:center;font-weight:bold;background-color:#e2e8f0;}h2,h3{text-align:center;margin:5px;}h2{font-size:18px;}h3{font-size:16px;}.sig-box{float:right;margin-top:40px;margin-right:40px;font-size:12px;}.sig-row{display:flex;align-items:flex-end;margin-bottom:8px;justify-content:flex-end;}.sig-label{text-align:right;margin-right:10px;width:80px;}.sig-dot{text-align:center;min-width:200px;border-bottom:1px dotted #000;}thead{display:table-header-group;}tr{break-inside:avoid;page-break-inside:avoid;}tbody td:nth-child(n+6):nth-child(-n+10){font-family:Arial,sans-serif;font-size:10px;font-variant-numeric:tabular-nums;text-align:right;overflow-wrap:anywhere;} .sig-box{break-inside:avoid;page-break-inside:avoid;}@media print{html{background:white;}body{width:277mm;margin:0;}th{print-color-adjust:exact;-webkit-print-color-adjust:exact;}}</style></head><body onload="prepareReportPrint()"><h2>แบบสรุปรายละเอียดโครงการที่เสนอขอประสานแผน</h2><h3>องค์การบริหารส่วนจังหวัดพิษณุโลก</h3><table><colgroup><col style="width:9mm"><col style="width:25mm"><col style="width:36mm"><col style="width:30mm"><col style="width:39mm"><col span="5" style="width:18mm"><col style="width:48mm"></colgroup><thead><tr><th rowspan="2">ลำดับที่</th><th rowspan="2">ชื่อหน่วยงาน<br>ที่ขอประสาน</th><th colspan="2">ชื่อโครงการ</th><th rowspan="2">รายละเอียดโครงการ</th><th colspan="5">งบประมาณที่เสนอขอ (บาท)</th><th rowspan="2">ผลการตรวจสอบพื้นที่</th></tr><tr><th>(ชื่อเดิม ของ อปท.)</th><th>(ชื่อที่ขอเปลี่ยนแปลง)</th>${reportBudgetYears.map(year => `<th>${year}</th>`).join('')}</tr></thead><tbody>${rowsHtml}</tbody></table><div class="sig-box"><div class="sig-row"><div class="sig-label">ลงชื่อ</div><div class="sig-dot"></div><div>ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label"></div><div class="sig-dot" style="border-bottom:none">(${iName})</div><div style="color:transparent">ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label">ตำแหน่ง</div><div class="sig-dot" style="border-bottom:none">${iPos}</div><div style="color:transparent">ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label">วันที่ตรวจสอบ</div><div class="sig-dot">......... / ......... / .............</div><div style="color:transparent">ผู้ตรวจสอบพื้นที่</div></div></div>${projectImageSections}<script>function fitReportAmounts(){document.querySelectorAll("tbody td:nth-child(n+6):nth-child(-n+10)").forEach(function(cell){cell.style.fontSize="10px";cell.style.whiteSpace="nowrap";var size=10;while(cell.scrollWidth>cell.clientWidth && size>8){size-=0.25;cell.style.fontSize=size+"px";}if(cell.scrollWidth>cell.clientWidth)cell.style.whiteSpace="normal";});}async function prepareReportPrint(){if(document.fonts)await document.fonts.ready;await Promise.all(Array.from(document.images).map(function(img){if(img.complete)return Promise.resolve();return new Promise(function(resolve){img.addEventListener("load",resolve,{once:true});img.addEventListener("error",resolve,{once:true});setTimeout(resolve,5000);});}));fitReportAmounts();requestAnimationFrame(function(){requestAnimationFrame(function(){window.print();});});}window.addEventListener("beforeprint",fitReportAmounts);<\/script></body></html>`;
+                    const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>พิมพ์รายงาน</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet"><style>@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}html{background:#e5e7eb}body{width:277mm;margin:10mm auto;background:#fff;font-family:'Sarabun',sans-serif;font-size:11px;color:#111}.project-page{width:277mm;height:190mm;display:flex;flex-direction:column;page-break-after:always;break-after:page;overflow:hidden}.project-page:last-child{page-break-after:auto;break-after:auto}.report-heading{text-align:center;flex:none}.report-heading h2,.report-heading h3{margin:2px}.report-heading h2{font-size:17px}.report-heading h3{font-size:14px}.project-caption{font-size:10px;color:#475569;margin-top:3px}.project-table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:5px}.project-table th,.project-table td{border:1px solid #000;padding:5px 4px;vertical-align:top;overflow-wrap:anywhere;line-height:1.3}.project-table th{text-align:center;font-weight:700;background:#e2e8f0;font-size:10px}.project-table tbody tr{height:78mm}.project-table tbody td:nth-child(3),.project-table tbody td:nth-child(4){font-size:11px;line-height:1.4}.changed-project-name{color:#dc2626;font-weight:700;margin-top:8px;padding-top:6px;border-top:1px dashed #fca5a5}.changed-project-label{display:block;font-size:9px;margin-bottom:2px}.requested-budget-distance{margin-bottom:6px;padding-bottom:5px;border-bottom:1px dotted #94a3b8;color:#92400e}.project-table tbody td:nth-child(n+5):nth-child(-n+9){font-family:Arial,sans-serif;font-size:9px;font-variant-numeric:tabular-nums;text-align:right;overflow-wrap:anywhere}.project-bottom{display:flex;gap:7mm;height:64mm;padding-top:5mm;align-items:flex-start;break-inside:avoid}.project-photos{flex:1;min-width:0;height:59mm}.project-photos-title{font-size:10px;font-weight:700;color:#334155;margin-bottom:2mm}.project-photos-grid{display:grid;gap:2mm;height:53mm}.project-photos-grid figure{margin:0;min-width:0;display:flex;flex-direction:column;align-items:center}.project-photos-grid img{width:100%;object-fit:contain;border:1px solid #94a3b8;background:#fff}.project-photos-grid figcaption{font-size:8px;color:#475569;line-height:1.1;margin-top:1mm}.photo-count-1{grid-template-columns:1fr}.photo-count-2{grid-template-columns:repeat(2,1fr)}.photo-count-3,.photo-count-4{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr)}.photo-count-5,.photo-count-6{grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr)}.photo-count-1 img,.photo-count-2 img{height:47mm}.photo-count-3 img,.photo-count-4 img,.photo-count-5 img,.photo-count-6 img{height:21mm}.project-photos-empty{border:1px dashed #cbd5e1;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:10px}.sig-box{width:93mm;flex:none;margin-top:3mm;margin-right:2mm;font-size:11px;break-inside:avoid}.sig-row{display:flex;align-items:flex-end;margin-bottom:5px;justify-content:flex-end}.sig-label{text-align:right;margin-right:8px;width:65px}.sig-dot{text-align:center;min-width:190px;border-bottom:1px dotted #000}.sig-dot.no-line{border-bottom:none}.sig-ghost{color:transparent}.project-page thead{display:table-header-group}.project-page tr{break-inside:avoid;page-break-inside:avoid}@media print{html{background:#fff}body{width:277mm;margin:0}.project-page{width:277mm;height:190mm}th{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body onload="prepareReportPrint()">${rowsHtml}<script>function fitReportAmounts(){document.querySelectorAll("tbody td:nth-child(n+5):nth-child(-n+9)").forEach(function(cell){cell.style.fontSize="10px";cell.style.whiteSpace="nowrap";var size=10;while(cell.scrollWidth>cell.clientWidth && size>8){size-=0.25;cell.style.fontSize=size+"px";}if(cell.scrollWidth>cell.clientWidth)cell.style.whiteSpace="normal";});}async function prepareReportPrint(){if(document.fonts)await document.fonts.ready;await Promise.all(Array.from(document.images).map(function(img){if(img.complete)return Promise.resolve();return new Promise(function(resolve){img.addEventListener("load",resolve,{once:true});img.addEventListener("error",resolve,{once:true});setTimeout(resolve,5000);});}));fitReportAmounts();requestAnimationFrame(function(){requestAnimationFrame(function(){window.print();});});}window.addEventListener("beforeprint",fitReportAmounts);<\/script></body></html>`;
                     const w = window.open('','_blank'); w.document.write(html); w.document.close();
                 },
                 openAnalyze() { App.ui.openModal('analyzeModal'); },
@@ -2714,27 +2785,58 @@
                             select.appendChild(option);
                         });
                     }
-                    this.renderDistrictSummary();
+                    this.updateDistrictSummaryFilters('open');
                     App.ui.openModal('districtSummaryModal');
                 },
-                projectBudgetTotal(project) {
-                    return ['b2566','b2567','b2568','b2569','b2570'].reduce((sum, key) => {
+                updateDistrictSummaryFilters(source = '') {
+                    const districtSelect = document.getElementById('districtSummaryFilter');
+                    const subdistrictSelect = document.getElementById('districtSummarySubdistrictFilter');
+                    const yearSelect = document.getElementById('districtSummaryYearFilter');
+                    if(!districtSelect || !subdistrictSelect || !yearSelect) return;
+                    const district = districtSelect.value || '';
+                    if(source === 'district') subdistrictSelect.value = '';
+                    const previousSubdistrict = source === 'district' ? '' : subdistrictSelect.value;
+                    const districtProjects = App.state.proposals.filter(project => project.projectType !== 'ordinance' && (!district || project.district === district));
+                    if(!district) {
+                        subdistrictSelect.disabled = true;
+                        subdistrictSelect.innerHTML = '<option value="">เลือกอำเภอก่อน</option>';
+                    } else {
+                        const subdistricts = [...new Set(districtProjects.map(project => App.ui.getSubdistrict(project)).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'th'));
+                        subdistrictSelect.disabled = false;
+                        subdistrictSelect.innerHTML = '<option value="">ทุกตำบลในอำเภอนี้</option>' + subdistricts.map(value => `<option value="${App.ui.escapeHtml(value)}">ต.${App.ui.escapeHtml(value)}</option>`).join('');
+                        if(subdistricts.includes(previousSubdistrict)) subdistrictSelect.value = previousSubdistrict;
+                    }
+                    const subdistrict = subdistrictSelect.disabled ? '' : subdistrictSelect.value;
+                    const previousYear = source === 'district' || source === 'subdistrict' ? '' : yearSelect.value;
+                    const yearProjects = districtProjects.filter(project => !subdistrict || App.ui.getSubdistrict(project) === subdistrict);
+                    const years = [...new Set(yearProjects.flatMap(project => App.ui.getBudgetRequestYears(project)))].sort((a,b) => b-a);
+                    yearSelect.innerHTML = '<option value="">ทุกปีงบประมาณ</option>' + years.map(year => `<option value="${year}">พ.ศ. ${year}</option>`).join('');
+                    if(years.map(String).includes(previousYear)) yearSelect.value = previousYear;
+                    this.renderDistrictSummary();
+                },
+                projectBudgetTotal(project, budgetYear = '') {
+                    const filterYear = parseInt(budgetYear, 10);
+                    const projectYears = Array.isArray(project?.budgetYears) && project.budgetYears.length >= 5
+                        ? project.budgetYears.map(year => parseInt(year, 10))
+                        : Array.from({length:5}, (_, index) => (parseInt(project?.budgetStartYear, 10) || 2566) + index);
+                    return ['b2566','b2567','b2568','b2569','b2570'].reduce((sum, key, index) => {
+                        if(Number.isInteger(filterYear) && projectYears[index] !== filterYear) return sum;
                         const value = parseFloat(String(project?.budget?.[key] ?? 0).replace(/,/g, ''));
                         return sum + (Number.isFinite(value) ? value : 0);
                     }, 0);
                 },
-                getDistrictSummaryData(district = '') {
+                getDistrictSummaryData(district = '', subdistrict = '', budgetYear = '') {
                     const projects = App.state.proposals
-                        .filter(project => project.projectType !== 'ordinance' && (!district || project.district === district))
-                        .sort((a, b) => String(a.district || '').localeCompare(String(b.district || ''), 'th') || String(a.agencyName || '').localeCompare(String(b.agencyName || ''), 'th') || (parseInt(a.seqNo) || 0) - (parseInt(b.seqNo) || 0));
+                        .filter(project => project.projectType !== 'ordinance' && (!district || project.district === district) && (!subdistrict || App.ui.getSubdistrict(project) === subdistrict) && (!budgetYear || App.ui.getBudgetRequestYears(project).map(String).includes(String(budgetYear))))
+                        .sort((a, b) => String(a.district || '').localeCompare(String(b.district || ''), 'th') || App.ui.getSubdistrict(a).localeCompare(App.ui.getSubdistrict(b), 'th') || String(a.agencyName || '').localeCompare(String(b.agencyName || ''), 'th') || (parseInt(a.seqNo) || 0) - (parseInt(b.seqNo) || 0));
                     let requestedDistance = 0;
                     let mapDistance = 0;
                     let budgetTotal = 0;
                     let selectedCount = 0;
                     projects.forEach(project => {
-                        requestedDistance += App.features.extractDistanceFromString(project.projectDetails) || 0;
+                        requestedDistance += App.features.getRequestedBudgetDistance(project);
                         mapDistance += project.geoJSON ? App.features.calculateLength(project.geoJSON) : 0;
-                        budgetTotal += this.projectBudgetTotal(project);
+                        budgetTotal += this.projectBudgetTotal(project, budgetYear);
                         if(App.ui.getSelectionInfo(project).selected) selectedCount++;
                     });
                     const agencyCount = new Set(projects.map(project => `${project.district || ''}|${project.agencyName || ''}`).filter(value => value !== '|')).size;
@@ -2742,45 +2844,55 @@
                 },
                 renderDistrictSummary() {
                     const district = document.getElementById('districtSummaryFilter')?.value || '';
-                    const data = this.getDistrictSummaryData(district);
+                    const subdistrict = document.getElementById('districtSummarySubdistrictFilter')?.value || '';
+                    const budgetYear = document.getElementById('districtSummaryYearFilter')?.value || '';
+                    const data = this.getDistrictSummaryData(district, subdistrict, budgetYear);
                     document.getElementById('summaryProjectCount').textContent = `${data.projects.length.toLocaleString()} โครงการ`;
                     document.getElementById('summaryAgencyCount').textContent = `${data.agencyCount.toLocaleString()} แห่ง`;
                     document.getElementById('summaryRequestedDistance').textContent = `${(data.requestedDistance / 1000).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3})} กม.`;
                     document.getElementById('summaryMapDistance').textContent = `${(data.mapDistance / 1000).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3})} กม.`;
                     document.getElementById('summarySelectedCount').textContent = `${data.selectedCount.toLocaleString()} โครงการ`;
                     document.getElementById('summaryBudgetTotal').textContent = `${data.budgetTotal.toLocaleString('en-US',{maximumFractionDigits:2})} บาท`;
-                    document.getElementById('summaryResultText').textContent = `${data.projects.length.toLocaleString()} รายการ${district ? ` · อำเภอ${district}` : ' · ทุกอำเภอ'}`;
+                    document.getElementById('summaryResultText').textContent = `${data.projects.length.toLocaleString()} รายการ${district ? ` · อำเภอ${district}` : ' · ทุกอำเภอ'}${subdistrict ? ` · ต.${subdistrict}` : ''}${budgetYear ? ` · ปี ${budgetYear}` : ' · ทุกปีงบประมาณ'}`;
                     const body = document.getElementById('districtSummaryBody');
                     if(!data.projects.length) {
-                        body.innerHTML = '<tr><td colspan="9" class="p-10 text-center text-gray-400">ไม่พบข้อมูลโครงการในอำเภอที่เลือก</td></tr>';
+                        body.innerHTML = '<tr><td colspan="11" class="p-10 text-center text-gray-400">ไม่พบข้อมูลโครงการตามตัวกรองที่เลือก</td></tr>';
                         return;
                     }
                     body.innerHTML = data.projects.map((project, index) => {
-                        const requested = App.features.extractDistanceFromString(project.projectDetails) || 0;
+                        const requested = App.features.getRequestedBudgetDistance(project);
                         const mapped = project.geoJSON ? App.features.calculateLength(project.geoJSON) : 0;
-                        const budget = this.projectBudgetTotal(project);
+                        const budget = this.projectBudgetTotal(project, budgetYear);
+                        const projectYears = App.ui.getBudgetRequestYears(project);
+                        const displayedYears = budgetYear ? [parseInt(budgetYear, 10)] : projectYears;
                         const status = App.ui.getWorkflowStatus(project);
                         const forest = App.forest.analyzeProject(project);
                         const forestClass = !forest.available ? 'text-gray-500' : forest.intersects ? 'text-red-700 font-bold' : 'text-emerald-700 font-bold';
                         const spk = App.spk.analyzeProject(project);
                         const spkClass = !spk.available ? 'text-gray-500' : spk.intersects ? 'text-amber-800 font-bold' : 'text-emerald-700 font-bold';
-                        return `<tr class="border-b hover:bg-purple-50/60"><td class="p-3 text-center font-bold text-purple-700">${index + 1}</td><td class="p-3"><div class="font-bold">อ.${App.ui.escapeHtml(project.district || '-')}</div><div class="text-[10px] text-gray-500">${App.ui.escapeHtml(project.agencyName || '-')}</div></td><td class="p-3 max-w-[360px] whitespace-normal"><div class="font-bold text-gray-800">${App.ui.escapeHtml(App.ui.getProjectName(project) || 'ไม่มีชื่อโครงการ')}</div><div class="text-[10px] text-gray-500">ลำดับ ${App.ui.escapeHtml(project.seqNo || '-')}</div></td><td class="p-3">${App.ui.escapeHtml(project.budgetType || '-')}</td><td class="p-3 text-right whitespace-nowrap">${requested ? (requested / 1000).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' กม.' : '-'}</td><td class="p-3 text-right whitespace-nowrap">${mapped ? (mapped / 1000).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' กม.' : '-'}</td><td class="p-3 text-right font-bold whitespace-nowrap">${budget ? budget.toLocaleString('en-US',{maximumFractionDigits:2}) : '-'}</td><td class="p-3 max-w-[280px] whitespace-normal text-[10px]"><div class="${forestClass}"><b>ป่า:</b> ${App.ui.escapeHtml(App.forest.resultText(forest))}</div><div class="mt-1 pt-1 border-t border-dotted ${spkClass}"><b>ส.ป.ก.:</b> ${App.ui.escapeHtml(App.spk.resultText(spk))}</div></td><td class="p-3"><span class="inline-block bg-slate-100 text-slate-700 border border-slate-200 rounded px-2 py-1 font-bold whitespace-normal">${App.ui.escapeHtml(status)}</span></td></tr>`;
+                        return `<tr class="border-b hover:bg-purple-50/60"><td class="p-3 text-center font-bold text-purple-700">${index + 1}</td><td class="p-3"><div class="font-bold">อ.${App.ui.escapeHtml(project.district || '-')}</div><div class="text-[10px] text-gray-500">${App.ui.escapeHtml(project.agencyName || '-')}</div></td><td class="p-3 font-bold text-teal-700">${App.ui.escapeHtml(App.ui.getSubdistrict(project) || '-')}</td><td class="p-3 text-center font-bold text-violet-700 whitespace-nowrap">${displayedYears.length ? displayedYears.join(', ') : '-'}</td><td class="p-3 max-w-[360px] whitespace-normal"><div class="font-bold text-gray-800">${App.ui.escapeHtml(App.ui.getProjectName(project) || 'ไม่มีชื่อโครงการ')}</div><div class="text-[10px] text-gray-500">ลำดับ ${App.ui.escapeHtml(project.seqNo || '-')}</div></td><td class="p-3">${App.ui.escapeHtml(project.budgetType || '-')}</td><td class="p-3 text-right whitespace-nowrap">${requested ? (requested / 1000).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' กม.' : '-'}</td><td class="p-3 text-right whitespace-nowrap">${mapped ? (mapped / 1000).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' กม.' : '-'}</td><td class="p-3 text-right font-bold whitespace-nowrap">${budget ? budget.toLocaleString('en-US',{maximumFractionDigits:2}) : '-'}</td><td class="p-3 max-w-[280px] whitespace-normal text-[10px]"><div class="${forestClass}"><b>ป่า:</b> ${App.ui.escapeHtml(App.forest.resultText(forest))}</div><div class="mt-1 pt-1 border-t border-dotted ${spkClass}"><b>ส.ป.ก.:</b> ${App.ui.escapeHtml(App.spk.resultText(spk))}</div></td><td class="p-3"><span class="inline-block bg-slate-100 text-slate-700 border border-slate-200 rounded px-2 py-1 font-bold whitespace-normal">${App.ui.escapeHtml(status)}</span></td></tr>`;
                     }).join('');
                 },
                 printDistrictSummary() {
                     const district = document.getElementById('districtSummaryFilter')?.value || '';
-                    const data = this.getDistrictSummaryData(district);
-                    const title = district ? `อำเภอ${district}` : 'ทุกอำเภอ';
+                    const subdistrict = document.getElementById('districtSummarySubdistrictFilter')?.value || '';
+                    const budgetYear = document.getElementById('districtSummaryYearFilter')?.value || '';
+                    const data = this.getDistrictSummaryData(district, subdistrict, budgetYear);
+                    const titleParts = [district ? `อำเภอ${district}` : 'ทุกอำเภอ'];
+                    if(subdistrict) titleParts.push(`ตำบล${subdistrict}`);
+                    titleParts.push(budgetYear ? `ปีงบประมาณ ${budgetYear}` : 'ทุกปีงบประมาณ');
+                    const title = titleParts.join(' · ');
                     const rows = data.projects.map((project, index) => {
-                        const requested = App.features.extractDistanceFromString(project.projectDetails) || 0;
+                        const requested = App.features.getRequestedBudgetDistance(project);
                         const mapped = project.geoJSON ? App.features.calculateLength(project.geoJSON) : 0;
-                        const budget = this.projectBudgetTotal(project);
+                        const budget = this.projectBudgetTotal(project, budgetYear);
+                        const displayedYears = budgetYear ? [parseInt(budgetYear, 10)] : App.ui.getBudgetRequestYears(project);
                         const forest = App.forest.analyzeProject(project);
                         const spk = App.spk.analyzeProject(project);
-                        return `<tr><td class="center">${index + 1}</td><td><b>อ.${App.ui.escapeHtml(project.district || '-')}</b><br><small>${App.ui.escapeHtml(project.agencyName || '-')}</small></td><td>${App.ui.escapeHtml(App.ui.getProjectName(project) || 'ไม่มีชื่อโครงการ')}</td><td>${App.ui.escapeHtml(project.budgetType || '-')}</td><td class="number">${requested ? (requested / 1000).toFixed(3) : '-'}</td><td class="number">${mapped ? (mapped / 1000).toFixed(3) : '-'}</td><td class="number">${budget ? budget.toLocaleString('en-US',{maximumFractionDigits:2}) : '-'}</td><td><b>ป่า:</b> ${App.ui.escapeHtml(App.forest.resultText(forest))}<br><b>ส.ป.ก.:</b> ${App.ui.escapeHtml(App.spk.resultText(spk))}</td><td>${App.ui.escapeHtml(App.ui.getWorkflowStatus(project))}</td></tr>`;
-                    }).join('') || '<tr><td colspan="9" class="center empty">ไม่พบข้อมูลโครงการ</td></tr>';
+                        return `<tr><td class="center">${index + 1}</td><td><b>อ.${App.ui.escapeHtml(project.district || '-')}</b><br><small>${App.ui.escapeHtml(project.agencyName || '-')}</small></td><td>${App.ui.escapeHtml(App.ui.getSubdistrict(project) || '-')}</td><td class="center">${displayedYears.length ? displayedYears.join(', ') : '-'}</td><td>${App.ui.escapeHtml(App.ui.getProjectName(project) || 'ไม่มีชื่อโครงการ')}</td><td>${App.ui.escapeHtml(project.budgetType || '-')}</td><td class="number">${requested ? (requested / 1000).toFixed(3) : '-'}</td><td class="number">${mapped ? (mapped / 1000).toFixed(3) : '-'}</td><td class="number">${budget ? budget.toLocaleString('en-US',{maximumFractionDigits:2}) : '-'}</td><td><b>ป่า:</b> ${App.ui.escapeHtml(App.forest.resultText(forest))}<br><b>ส.ป.ก.:</b> ${App.ui.escapeHtml(App.spk.resultText(spk))}</td><td>${App.ui.escapeHtml(App.ui.getWorkflowStatus(project))}</td></tr>`;
+                    }).join('') || '<tr><td colspan="11" class="center empty">ไม่พบข้อมูลโครงการ</td></tr>';
                     const generatedDate = new Date().toLocaleDateString('th-TH', {year:'numeric',month:'long',day:'numeric'});
-                    const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>สรุปข้อมูลโครงการแยกรายอำเภอ</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet"><style>@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}body{font-family:'Sarabun',sans-serif;color:#111827;margin:0;font-size:9px}h1,h2,p{margin:0;text-align:center}h1{font-size:18px}h2{font-size:14px;margin-top:3px}.date{margin-top:4px;color:#4b5563}.cards{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin:12px 0}.card{border:1px solid #c4b5fd;border-radius:6px;padding:7px;background:#fafaff}.card span{display:block;color:#6b7280;font-size:8px}.card b{display:block;margin-top:3px;font-size:11px;color:#4c1d95}.card.blue{border-color:#bfdbfe;background:#eff6ff}.card.green{border-color:#bbf7d0;background:#f0fdf4}.card.amber{border-color:#fcd34d;background:#fffbeb}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #6b7280;padding:4px;vertical-align:top;overflow-wrap:anywhere}th{background:#ede9fe;text-align:center;font-weight:700}thead{display:table-header-group}tr{break-inside:avoid}.center{text-align:center}.number{text-align:right;white-space:nowrap}.empty{padding:20px;color:#6b7280}small{font-size:8px;color:#4b5563}.foot{margin-top:6px;text-align:right;color:#6b7280}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body onload="window.print()"><h1>สรุปข้อมูลโครงการประสานแผนแยกรายอำเภอ</h1><h2>องค์การบริหารส่วนจังหวัดพิษณุโลก — ${App.ui.escapeHtml(title)}</h2><p class="date">ข้อมูล ณ วันที่ ${generatedDate}</p><div class="cards"><div class="card"><span>โครงการ</span><b>${data.projects.length.toLocaleString()} โครงการ</b></div><div class="card"><span>หน่วยงานเสนอ</span><b>${data.agencyCount.toLocaleString()} แห่ง</b></div><div class="card"><span>ระยะตามรายละเอียด</span><b>${(data.requestedDistance/1000).toFixed(3)} กม.</b></div><div class="card blue"><span>ระยะบนแผนที่</span><b>${(data.mapDistance/1000).toFixed(3)} กม.</b></div><div class="card green"><span>ได้รับการคัดเลือก</span><b>${data.selectedCount.toLocaleString()} โครงการ</b></div><div class="card amber"><span>งบประมาณรวม</span><b>${data.budgetTotal.toLocaleString('en-US',{maximumFractionDigits:2})} บาท</b></div></div><table><colgroup><col style="width:4%"><col style="width:12%"><col style="width:21%"><col style="width:8%"><col style="width:8%"><col style="width:8%"><col style="width:10%"><col style="width:18%"><col style="width:11%"></colgroup><thead><tr><th>ลำดับ</th><th>อำเภอ / หน่วยงาน</th><th>ชื่อโครงการ</th><th>ประเภทเงิน</th><th>ระยะตามรายละเอียด<br>(กม.)</th><th>ระยะบนแผนที่<br>(กม.)</th><th>งบประมาณ<br>(บาท)</th><th>ผลตรวจสอบพื้นที่</th><th>ขั้นตอน</th></tr></thead><tbody>${rows}</tbody></table><div class="foot">รวม ${data.projects.length.toLocaleString()} รายการ · ผลตรวจสอบป่าและเขต ส.ป.ก. เป็นการตรวจสอบเบื้องต้นจากชั้นข้อมูล KML</div></body></html>`;
+                    const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>สรุปโครงการแยกอำเภอ ตำบล และปีงบประมาณ</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet"><style>@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}body{font-family:'Sarabun',sans-serif;color:#111827;margin:0;font-size:9px}h1,h2,p{margin:0;text-align:center}h1{font-size:18px}h2{font-size:14px;margin-top:3px}.date{margin-top:4px;color:#4b5563}.cards{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin:12px 0}.card{border:1px solid #c4b5fd;border-radius:6px;padding:7px;background:#fafaff}.card span{display:block;color:#6b7280;font-size:8px}.card b{display:block;margin-top:3px;font-size:11px;color:#4c1d95}.card.blue{border-color:#bfdbfe;background:#eff6ff}.card.green{border-color:#bbf7d0;background:#f0fdf4}.card.amber{border-color:#fcd34d;background:#fffbeb}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #6b7280;padding:4px;vertical-align:top;overflow-wrap:anywhere}th{background:#ede9fe;text-align:center;font-weight:700}thead{display:table-header-group}tr{break-inside:avoid}.center{text-align:center}.number{text-align:right;white-space:nowrap}.empty{padding:20px;color:#6b7280}small{font-size:8px;color:#4b5563}.foot{margin-top:6px;text-align:right;color:#6b7280}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body onload="window.print()"><h1>สรุปโครงการประสานแผนแยกอำเภอ ตำบล และปีงบประมาณ</h1><h2>องค์การบริหารส่วนจังหวัดพิษณุโลก — ${App.ui.escapeHtml(title)}</h2><p class="date">ข้อมูล ณ วันที่ ${generatedDate}</p><div class="cards"><div class="card"><span>โครงการ</span><b>${data.projects.length.toLocaleString()} โครงการ</b></div><div class="card"><span>หน่วยงานเสนอ</span><b>${data.agencyCount.toLocaleString()} แห่ง</b></div><div class="card"><span>ระยะทางที่เสนอของบประมาณ</span><b>${(data.requestedDistance/1000).toFixed(3)} กม.</b></div><div class="card blue"><span>ระยะบนแผนที่</span><b>${(data.mapDistance/1000).toFixed(3)} กม.</b></div><div class="card green"><span>ได้รับการคัดเลือก</span><b>${data.selectedCount.toLocaleString()} โครงการ</b></div><div class="card amber"><span>งบประมาณรวม</span><b>${data.budgetTotal.toLocaleString('en-US',{maximumFractionDigits:2})} บาท</b></div></div><table><colgroup><col style="width:4%"><col style="width:12%"><col style="width:7%"><col style="width:7%"><col style="width:18%"><col style="width:7%"><col style="width:7%"><col style="width:7%"><col style="width:10%"><col style="width:14%"><col style="width:7%"></colgroup><thead><tr><th>ลำดับ</th><th>อำเภอ / หน่วยงาน</th><th>ตำบล</th><th>ปีงบประมาณ</th><th>ชื่อโครงการ</th><th>ประเภทเงิน</th><th>ระยะทางที่เสนอ<br>ของบประมาณ (กม.)</th><th>ระยะบนแผนที่<br>(กม.)</th><th>งบประมาณ<br>(บาท)</th><th>ผลตรวจสอบพื้นที่</th><th>ขั้นตอน</th></tr></thead><tbody>${rows}</tbody></table><div class="foot">รวม ${data.projects.length.toLocaleString()} รายการ · ผลตรวจสอบป่าและเขต ส.ป.ก. เป็นการตรวจสอบเบื้องต้นจากชั้นข้อมูล KML</div></body></html>`;
                     const printWindow = window.open('', '_blank');
                     if(!printWindow) return App.ui.showToast('เบราว์เซอร์บล็อกหน้าต่างพิมพ์ กรุณาอนุญาต Pop-up', 'error');
                     printWindow.document.write(html);
@@ -2841,7 +2953,7 @@
                         App.db.saveToLocal(); App.map.drawMarkers(); App.ui.updateOrdinanceFolderCount();
                         if(!document.getElementById('ordinanceModal').classList.contains('hidden')) App.ui.renderOrdinanceTable();
                         if(!document.getElementById('analyzeModal').classList.contains('hidden')) App.ui.renderAnalyzeTable();
-                        if(!document.getElementById('districtSummaryModal').classList.contains('hidden')) App.features.renderDistrictSummary();
+                        if(!document.getElementById('districtSummaryModal').classList.contains('hidden')) App.features.updateDistrictSummaryFilters('refresh');
                     }, (e) => { console.error(e); this.loadLocal(); });
                 },
                 loadLocal() { try { const data = localStorage.getItem('localProposals'); if(data) { App.state.proposals = JSON.parse(data); App.map.drawMarkers(); App.ui.updateOrdinanceFolderCount(); } } catch(e){} },
@@ -2965,7 +3077,8 @@
                             budgetRequestYear:budgetRequestYears[0] || null, budgetRequestYears,
                             projectNameOld:projectNameOldValue, projectNameNew:projectNameNewValue,
                             budgetType:document.getElementById('budgetType').value,
-                            projectDetails:document.getElementById('projectDetails').value, 
+                            projectDetails:document.getElementById('projectDetails').value,
+                            requestedBudgetDistance:(() => { const value = parseFloat(document.getElementById('requestedBudgetDistance').value); return Number.isFinite(value) && value >= 0 ? value : null; })(),
                             coordinates:{
                                 startLat: parseCoord(document.getElementById('startLatInput').value), startLng: parseCoord(document.getElementById('startLngInput').value), 
                                 endLat: parseCoord(document.getElementById('endLatInput').value), endLng: parseCoord(document.getElementById('endLngInput').value)
