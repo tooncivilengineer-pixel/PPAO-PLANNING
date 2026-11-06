@@ -494,7 +494,7 @@
                                             </div>
                                             <div class="flex items-center gap-1 border-l pl-3">
                                                 <i class="fa-solid fa-road text-amber-600"></i><label for="requestedBudgetDistance" class="text-[10px] font-bold text-gray-600 whitespace-nowrap">ระยะทางที่เสนอของบประมาณ:</label>
-                                                <input type="number" id="requestedBudgetDistance" min="0" step="0.01" class="w-24 border rounded px-2 py-1 text-amber-700 font-bold text-xs text-right outline-none focus:ring-2 focus:ring-amber-300" placeholder="0.00">
+                                                <input type="text" inputmode="decimal" id="requestedBudgetDistance" oninput="this.value=this.value.replace(/[^0-9.,]/g,'')" class="w-24 border rounded px-2 py-1 text-amber-700 font-bold text-xs text-right outline-none focus:ring-2 focus:ring-amber-300" placeholder="เช่น 5,300">
                                                 <span class="text-[10px] font-bold text-gray-600">ม.</span>
                                             </div>
                                         </div>
@@ -565,8 +565,9 @@
                                     <i class="fa-solid fa-file-arrow-up mr-2"></i> เลือกไฟล์แนบ
                                 </button>
                                 <input type="file" id="fileAttachmentInput" multiple accept="image/*,.pdf" class="hidden" onchange="App.features.handleFileSelect(event)">
-                                <span class="text-xs text-gray-500">รองรับรูปภาพ (JPG, PNG) และเอกสาร (PDF)</span>
+                                <span class="text-xs text-gray-500">รองรับรูปภาพ (JPG, PNG) สูงสุด 6 ภาพต่อโครงการ และไฟล์ PDF</span>
                             </div>
+                            <div id="attachmentImageCounter" class="text-xs font-bold text-indigo-700">รูปภาพ 0 / 6 ภาพ</div>
                             <div id="attachmentList" class="flex flex-col gap-2 mt-2"></div>
                         </div>
                     </div>
@@ -761,6 +762,8 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+        const MAX_PROJECT_IMAGES = 6;
 
         const ORG_DATA = {
             'เมืองพิษณุโลก': ['ทน.พิษณุโลก', 'ทม.อรัญญิก', 'ทต.พลายชุมพล', 'ทต.หัวรอ', 'ทต.ท่าทอง', 'ทต.บ้านคลอง', 'ทต.บ้านใหม่', 'ทต.สมอแข', 'อบต.วังน้ำคู้', 'อบต.วัดจันทร์', 'อบต.วัดพริก', 'อบต.ศรีภิรมย์', 'อบต.งิ้วงาม', 'อบต.ดอนทอง', 'อบต.ท่าโพธิ์', 'อบต.บ้านกร่าง', 'อบต.บึงพระ', 'อบต.จอมทอง', 'อบต.ไผ่ขอด', 'อบต.มะขามสูง', 'อบต.ปากโทก'],
@@ -1643,6 +1646,9 @@
                                     ${!isSyncOk ? '<div class="mt-2 rounded bg-red-50 border border-red-200 px-2 py-1.5 text-red-700 font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>พิกัดแนวถนนคลาดเคลื่อน โปรดตรวจสอบ</div>' : ''}
                                 </div>
                                 ${selectionPanel}
+                                <div class="px-2 pb-2">
+                                    <button type="button" onclick="App.features.openProjectNavigation(decodeURIComponent('${idToken}'))" class="w-full rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100" title="เปิดแผนที่นำทางจากตำแหน่งปัจจุบันไปยังถนนโครงการ"><i class="fa-solid fa-diamond-turn-right mr-1.5"></i>นำทางไปยังถนน</button>
+                                </div>
                                 <div class="grid grid-cols-3 border-t border-pink-100">
                                     <button type="button" onclick="App.state.map.closePopup(); App.features.openProposalDetail(decodeURIComponent('${idToken}'))" class="px-1.5 py-2.5 text-[10px] font-bold text-pink-700 hover:bg-pink-50 border-r border-pink-100" title="ดูรายละเอียดโครงการ"><i class="fa-solid fa-circle-info mr-1"></i>รายละเอียด</button>
                                     <button type="button" onclick="App.state.map.closePopup(); App.features.editProject(decodeURIComponent('${idToken}'))" class="px-1.5 py-2.5 text-[10px] font-bold text-amber-700 hover:bg-amber-50 border-r border-pink-100" title="แก้ไขชื่อ รายละเอียด งบประมาณ หน่วยงาน และพิกัดโครงการ"><i class="fa-solid fa-pen-to-square mr-1"></i>แก้ไขข้อมูล</button>
@@ -2104,6 +2110,25 @@
                     if(Number.isFinite(explicit) && explicit >= 0) return explicit;
                     return this.extractDistanceFromString(project?.projectDetails) || 0;
                 },
+                openProjectNavigation(id) {
+                    const project = App.state.proposals.find(item => String(item.id) === String(id));
+                    if(!project) return App.ui.showToast('ไม่พบข้อมูลโครงการที่ต้องการนำทาง', 'error');
+                    let lat = Number(project.coordinates?.startLat);
+                    let lng = Number(project.coordinates?.startLng);
+                    if(!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                        let geo = project.geoJSON;
+                        try { if(typeof geo === 'string') geo = JSON.parse(geo); } catch(e) { geo = null; }
+                        const first = geo ? App.roadMeasure.extractLineCoordinates(geo)[0] : null;
+                        lat = Number(first?.[1]);
+                        lng = Number(first?.[0]);
+                    }
+                    if(!Number.isFinite(lat) || !Number.isFinite(lng)) return App.ui.showToast('โครงการนี้ยังไม่มีพิกัดสำหรับนำทาง', 'error');
+                    const destination = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+                    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=driving`;
+                    const navigationWindow = window.open(url, '_blank');
+                    if(navigationWindow) { navigationWindow.opener = null; App.ui.showToast('กำลังเปิดเส้นทางไปยังถนนโครงการ...', 'success'); }
+                    else App.ui.showToast('เบราว์เซอร์ปิดกั้นหน้าต่างนำทาง กรุณาอนุญาตป๊อปอัป', 'error');
+                },
                 checkGeometrySync(p) {
                     if (!p.geoJSON || !p.coordinates || (!p.coordinates.startLat && !p.coordinates.endLat)) return true;
                     let pts = []; const ext = (g) => { if(g.type==='LineString') pts.push(...g.coordinates); else if(g.type==='MultiLineString') g.coordinates.forEach(c => pts.push(...c)); };
@@ -2345,10 +2370,25 @@
                         App.ui.showToast("ลบโครงการออกจากระบบแล้ว", "success");
                     }
                 },
+                isImageAttachment(file) {
+                    return !!file && ((typeof file.type === 'string' && file.type.startsWith('image/')) || (typeof file.url === 'string' && (file.url.startsWith('data:image/') || /\.(jpe?g|png|gif|webp)(\?|$)/i.test(file.url))));
+                },
                 handleFileSelect(evt) {
-                    const files = Array.from(evt.target.files);
-                    App.state.attachments = [...App.state.attachments, ...files];
+                    const files = Array.from(evt.target.files || []);
+                    const currentImageCount = [...App.state.existingAttachments, ...App.state.attachments].filter(file => this.isImageAttachment(file)).length;
+                    let remainingImages = Math.max(0, MAX_PROJECT_IMAGES - currentImageCount);
+                    const acceptedFiles = [];
+                    let rejectedImageCount = 0;
+                    files.forEach(file => {
+                        if(this.isImageAttachment(file)) {
+                            if(remainingImages <= 0) { rejectedImageCount++; return; }
+                            remainingImages--;
+                        }
+                        acceptedFiles.push(file);
+                    });
+                    App.state.attachments = [...App.state.attachments, ...acceptedFiles];
                     this.renderAttachments();
+                    if(rejectedImageCount > 0) App.ui.showToast(`แนบรูปได้สูงสุด ${MAX_PROJECT_IMAGES} ภาพต่อโครงการ ระบบข้าม ${rejectedImageCount} ภาพที่เกิน`, 'error');
                     evt.target.value = '';
                 },
                 removeAttachment(index, isExisting = false) {
@@ -2358,6 +2398,12 @@
                 },
                 renderAttachments() {
                     const list = document.getElementById('attachmentList'); if(!list) return;
+                    const imageCount = [...App.state.existingAttachments, ...App.state.attachments].filter(file => this.isImageAttachment(file)).length;
+                    const counter = document.getElementById('attachmentImageCounter');
+                    if(counter) {
+                        counter.textContent = `รูปภาพ ${imageCount} / ${MAX_PROJECT_IMAGES} ภาพ`;
+                        counter.className = `text-xs font-bold ${imageCount >= MAX_PROJECT_IMAGES ? 'text-red-600' : 'text-indigo-700'}`;
+                    }
                     let html = '';
                     App.state.existingAttachments.forEach((f, i) => {
                         const icon = f.type && f.type.includes('pdf') ? 'fa-file-pdf text-red-500' : 'fa-image text-blue-500';
@@ -2563,16 +2609,18 @@
                         const requestedBudgetDistance = App.features.getRequestedBudgetDistance(p);
                         const requestedBudgetDistanceHtml = requestedBudgetDistance > 0 ? `<div class="requested-budget-distance"><b>ระยะทางที่เสนอของบประมาณ:</b> ${requestedBudgetDistance.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} เมตร</div>` : '';
                         const projectImages = (Array.isArray(p.attachments) ? p.attachments : [])
-                            .filter(f => (f?.type && f.type.startsWith('image/')) || (typeof f?.url === 'string' && (f.url.startsWith('data:image/') || /\.(jpe?g|png|gif|webp)(\?|$)/i.test(f.url))))
+                            .filter(f => App.features.isImageAttachment(f))
                             .map(f => ({ src: f.url || (f instanceof File ? URL.createObjectURL(f) : ''), name: f.name || 'ภาพถ่ายประกอบ' }))
                             .filter(f => f.src)
-                            .slice(0, 6);
-                        const photoCount = projectImages.length;
-                        const projectPhotosHtml = photoCount
-                            ? `<div class="project-photos"><div class="project-photos-title">รูปถ่ายประกอบโครงการ</div><div class="project-photos-grid photo-count-${photoCount}">${projectImages.map((image, imgIdx) => `<figure><img src="${image.src}" alt="ภาพถ่ายประกอบ ${imgIdx + 1}"><figcaption>ภาพที่ ${imgIdx + 1}</figcaption></figure>`).join('')}</div></div>`
-                            : `<div class="project-photos project-photos-empty"><div>พื้นที่สำหรับรูปถ่ายประกอบโครงการ</div></div>`;
+                            .slice(0, MAX_PROJECT_IMAGES);
+                        const photoSlotsHtml = Array.from({length:MAX_PROJECT_IMAGES}, (_, imgIdx) => {
+                            const image = projectImages[imgIdx];
+                            return image
+                                ? `<figure class="photo-slot"><img src="${image.src}" alt="ภาพถ่ายประกอบ ${imgIdx + 1}"><figcaption>ภาพที่ ${imgIdx + 1}</figcaption></figure>`
+                                : `<figure class="photo-slot photo-slot-empty"><div class="photo-placeholder">ภาพที่ ${imgIdx + 1}</div><figcaption>ภาพที่ ${imgIdx + 1}</figcaption></figure>`;
+                        }).join('');
 
-                        rowsHtml += `<section class="project-page">
+                        rowsHtml += `<section class="project-page project-data-page">
                             <div class="report-heading"><h2>แบบสรุปรายละเอียดโครงการที่เสนอขอประสานแผน</h2><h3>องค์การบริหารส่วนจังหวัดพิษณุโลก</h3><div class="project-caption">โครงการลำดับที่ ${displaySeq} · อ.${App.ui.escapeHtml(p.district || '-')} · ${App.ui.escapeHtml(p.agencyName || '-')}</div></div>
                             <table class="project-table"><colgroup><col style="width:8mm"><col style="width:26mm"><col style="width:76mm"><col style="width:46mm"><col span="5" style="width:15mm"><col style="width:46mm"></colgroup><thead><tr><th rowspan="2">ลำดับ<br>ที่</th><th rowspan="2">ชื่อหน่วยงาน<br>ที่ขอประสาน</th><th>ชื่อโครงการ</th><th rowspan="2">รายละเอียดโครงการ</th><th colspan="5">งบประมาณที่เสนอขอ (บาท)</th><th rowspan="2">ผลการตรวจสอบพื้นที่</th></tr><tr><th>(ชื่อเดิม ของ อปท.)</th>${projectReportYears.map(year => `<th>${year}</th>`).join('')}</tr></thead><tbody><tr>
                             <td style="text-align:center;">${displaySeq}</td>
@@ -2594,11 +2642,15 @@
                                 <div style="margin-top:4px;padding-top:4px;border-top:1px dotted #999;font-size:10px;"><b>ตรวจสอบเขต ส.ป.ก.:</b><br>${spkText}</div>
                             </td>
                         </tr></tbody></table>
-                            <div class="project-bottom">${projectPhotosHtml}<div class="sig-box"><div class="sig-row"><div class="sig-label">ลงชื่อ</div><div class="sig-dot"></div><div>ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label"></div><div class="sig-dot no-line">(${iName})</div><div class="sig-ghost">ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label">ตำแหน่ง</div><div class="sig-dot no-line">${iPos}</div><div class="sig-ghost">ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label">วันที่ตรวจสอบ</div><div class="sig-dot">......... / ......... / .............</div><div class="sig-ghost">ผู้ตรวจสอบพื้นที่</div></div></div></div>
+                            <div class="sig-box data-signature"><div class="sig-row"><div class="sig-label">ลงชื่อ</div><div class="sig-dot"></div><div>ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label"></div><div class="sig-dot no-line">(${iName})</div><div class="sig-ghost">ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label">ตำแหน่ง</div><div class="sig-dot no-line">${iPos}</div><div class="sig-ghost">ผู้ตรวจสอบพื้นที่</div></div><div class="sig-row"><div class="sig-label">วันที่ตรวจสอบ</div><div class="sig-dot">......... / ......... / .............</div><div class="sig-ghost">ผู้ตรวจสอบพื้นที่</div></div></div>
+                        </section>
+                        <section class="project-page photo-page">
+                            <div class="photo-page-heading"><h2>แบบบันทึกภาพถ่ายประกอบโครงการ</h2><h3>องค์การบริหารส่วนจังหวัดพิษณุโลก</h3><div>โครงการลำดับที่ ${displaySeq} · ${App.ui.escapeHtml(App.ui.getProjectName(p) || '-')}</div><div>อ.${App.ui.escapeHtml(p.district || '-')} · ${App.ui.escapeHtml(p.agencyName || '-')}</div></div>
+                            <div class="photo-sheet-grid">${photoSlotsHtml}</div>
                         </section>`;
                     });
 
-                    const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>พิมพ์รายงาน</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet"><style>@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}html{background:#e5e7eb}body{width:277mm;margin:10mm auto;background:#fff;font-family:'Sarabun',sans-serif;font-size:11px;color:#111}.project-page{width:277mm;height:190mm;display:flex;flex-direction:column;page-break-after:always;break-after:page;overflow:hidden}.project-page:last-child{page-break-after:auto;break-after:auto}.report-heading{text-align:center;flex:none}.report-heading h2,.report-heading h3{margin:2px}.report-heading h2{font-size:17px}.report-heading h3{font-size:14px}.project-caption{font-size:10px;color:#475569;margin-top:3px}.project-table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:5px}.project-table th,.project-table td{border:1px solid #000;padding:5px 4px;vertical-align:top;overflow-wrap:anywhere;line-height:1.3}.project-table th{text-align:center;font-weight:700;background:#e2e8f0;font-size:10px}.project-table tbody tr{height:78mm}.project-table tbody td:nth-child(3),.project-table tbody td:nth-child(4){font-size:11px;line-height:1.4}.changed-project-name{color:#dc2626;font-weight:700;margin-top:8px;padding-top:6px;border-top:1px dashed #fca5a5}.changed-project-label{display:block;font-size:9px;margin-bottom:2px}.requested-budget-distance{margin-bottom:6px;padding-bottom:5px;border-bottom:1px dotted #94a3b8;color:#92400e}.project-table tbody td:nth-child(n+5):nth-child(-n+9){font-family:Arial,sans-serif;font-size:9px;font-variant-numeric:tabular-nums;text-align:right;overflow-wrap:anywhere}.project-bottom{display:flex;gap:7mm;height:64mm;padding-top:5mm;align-items:flex-start;break-inside:avoid}.project-photos{flex:1;min-width:0;height:59mm}.project-photos-title{font-size:10px;font-weight:700;color:#334155;margin-bottom:2mm}.project-photos-grid{display:grid;gap:2mm;height:53mm}.project-photos-grid figure{margin:0;min-width:0;display:flex;flex-direction:column;align-items:center}.project-photos-grid img{width:100%;object-fit:contain;border:1px solid #94a3b8;background:#fff}.project-photos-grid figcaption{font-size:8px;color:#475569;line-height:1.1;margin-top:1mm}.photo-count-1{grid-template-columns:1fr}.photo-count-2{grid-template-columns:repeat(2,1fr)}.photo-count-3,.photo-count-4{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr)}.photo-count-5,.photo-count-6{grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr)}.photo-count-1 img,.photo-count-2 img{height:47mm}.photo-count-3 img,.photo-count-4 img,.photo-count-5 img,.photo-count-6 img{height:21mm}.project-photos-empty{border:1px dashed #cbd5e1;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:10px}.sig-box{width:93mm;flex:none;margin-top:3mm;margin-right:2mm;font-size:11px;break-inside:avoid}.sig-row{display:flex;align-items:flex-end;margin-bottom:5px;justify-content:flex-end}.sig-label{text-align:right;margin-right:8px;width:65px}.sig-dot{text-align:center;min-width:190px;border-bottom:1px dotted #000}.sig-dot.no-line{border-bottom:none}.sig-ghost{color:transparent}.project-page thead{display:table-header-group}.project-page tr{break-inside:avoid;page-break-inside:avoid}@media print{html{background:#fff}body{width:277mm;margin:0}.project-page{width:277mm;height:190mm}th{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body onload="prepareReportPrint()">${rowsHtml}<script>function fitReportAmounts(){document.querySelectorAll("tbody td:nth-child(n+5):nth-child(-n+9)").forEach(function(cell){cell.style.fontSize="10px";cell.style.whiteSpace="nowrap";var size=10;while(cell.scrollWidth>cell.clientWidth && size>8){size-=0.25;cell.style.fontSize=size+"px";}if(cell.scrollWidth>cell.clientWidth)cell.style.whiteSpace="normal";});}async function prepareReportPrint(){if(document.fonts)await document.fonts.ready;await Promise.all(Array.from(document.images).map(function(img){if(img.complete)return Promise.resolve();return new Promise(function(resolve){img.addEventListener("load",resolve,{once:true});img.addEventListener("error",resolve,{once:true});setTimeout(resolve,5000);});}));fitReportAmounts();requestAnimationFrame(function(){requestAnimationFrame(function(){window.print();});});}window.addEventListener("beforeprint",fitReportAmounts);<\/script></body></html>`;
+                    const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>พิมพ์รายงาน</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet"><style>@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}html{background:#e5e7eb}body{width:277mm;margin:10mm auto;background:#fff;font-family:'Sarabun',sans-serif;font-size:11px;color:#111}.project-page{width:277mm;height:190mm;display:flex;flex-direction:column;page-break-after:always;break-after:page;overflow:hidden}.project-page:last-child{page-break-after:auto;break-after:auto}.report-heading{text-align:center;flex:none}.report-heading h2,.report-heading h3{margin:2px}.report-heading h2{font-size:17px}.report-heading h3{font-size:14px}.project-caption{font-size:10px;color:#475569;margin-top:3px}.project-table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:5px}.project-table th,.project-table td{border:1px solid #000;padding:5px 4px;vertical-align:top;overflow-wrap:anywhere;line-height:1.3}.project-table th{text-align:center;font-weight:700;background:#e2e8f0;font-size:10px}.project-data-page .project-table tbody tr{height:120mm}.project-table tbody td:nth-child(3),.project-table tbody td:nth-child(4){font-size:11px;line-height:1.4}.changed-project-name{color:#dc2626;font-weight:700;margin-top:8px;padding-top:6px;border-top:1px dashed #fca5a5}.changed-project-label{display:block;font-size:9px;margin-bottom:2px}.requested-budget-distance{margin-bottom:6px;padding-bottom:5px;border-bottom:1px dotted #94a3b8;color:#92400e}.project-table tbody td:nth-child(n+5):nth-child(-n+9){font-family:Arial,sans-serif;font-size:9px;font-variant-numeric:tabular-nums;text-align:right;overflow-wrap:anywhere}.photo-page-heading{text-align:center;flex:none;border-bottom:2px solid #1e3a8a;padding-bottom:3mm;margin-bottom:4mm}.photo-page-heading h2,.photo-page-heading h3{margin:1mm}.photo-page-heading h2{font-size:17px}.photo-page-heading h3{font-size:14px}.photo-page-heading div{font-size:10px;color:#475569;margin-top:1mm}.photo-sheet-grid{flex:1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:4mm;min-height:0}.photo-slot{margin:0;border:1px solid #000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:0;padding:2mm}.photo-slot img{width:100%;height:62mm;object-fit:contain}.photo-slot figcaption{font-size:10px;line-height:1.1;margin-top:1mm}.photo-slot-empty{border:1px dashed #94a3b8;color:#94a3b8}.photo-placeholder{flex:1;width:100%;display:flex;align-items:center;justify-content:center;font-size:12px}.sig-box{width:93mm;flex:none;font-size:11px;break-inside:avoid}.data-signature{align-self:flex-end;margin-top:auto;margin-right:4mm;margin-bottom:2mm}.sig-row{display:flex;align-items:flex-end;margin-bottom:5px;justify-content:flex-end}.sig-label{text-align:right;margin-right:8px;width:65px}.sig-dot{text-align:center;min-width:190px;border-bottom:1px dotted #000}.sig-dot.no-line{border-bottom:none}.sig-ghost{color:transparent}.project-page thead{display:table-header-group}.project-page tr{break-inside:avoid;page-break-inside:avoid}@media print{html{background:#fff}body{width:277mm;margin:0}.project-page{width:277mm;height:190mm}th{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body onload="prepareReportPrint()">${rowsHtml}<script>function fitReportAmounts(){document.querySelectorAll("tbody td:nth-child(n+5):nth-child(-n+9)").forEach(function(cell){cell.style.fontSize="10px";cell.style.whiteSpace="nowrap";var size=10;while(cell.scrollWidth>cell.clientWidth && size>8){size-=0.25;cell.style.fontSize=size+"px";}if(cell.scrollWidth>cell.clientWidth)cell.style.whiteSpace="normal";});}async function prepareReportPrint(){if(document.fonts)await document.fonts.ready;await Promise.all(Array.from(document.images).map(function(img){if(img.complete)return Promise.resolve();return new Promise(function(resolve){img.addEventListener("load",resolve,{once:true});img.addEventListener("error",resolve,{once:true});setTimeout(resolve,5000);});}));fitReportAmounts();requestAnimationFrame(function(){requestAnimationFrame(function(){window.print();});});}window.addEventListener("beforeprint",fitReportAmounts);<\/script></body></html>`;
                     const w = window.open('','_blank'); w.document.write(html); w.document.close();
                 },
                 openAnalyze() { App.ui.openModal('analyzeModal'); },
@@ -3078,7 +3130,7 @@
                             projectNameOld:projectNameOldValue, projectNameNew:projectNameNewValue,
                             budgetType:document.getElementById('budgetType').value,
                             projectDetails:document.getElementById('projectDetails').value,
-                            requestedBudgetDistance:(() => { const value = parseFloat(document.getElementById('requestedBudgetDistance').value); return Number.isFinite(value) && value >= 0 ? value : null; })(),
+                            requestedBudgetDistance:(() => { const value = parseFloat(String(document.getElementById('requestedBudgetDistance').value || '').replace(/,/g, '')); return Number.isFinite(value) && value >= 0 ? value : null; })(),
                             coordinates:{
                                 startLat: parseCoord(document.getElementById('startLatInput').value), startLng: parseCoord(document.getElementById('startLngInput').value), 
                                 endLat: parseCoord(document.getElementById('endLatInput').value), endLng: parseCoord(document.getElementById('endLngInput').value)
