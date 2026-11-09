@@ -40,6 +40,9 @@
         .road-hover-popup .leaflet-popup-content-wrapper { border: 1px solid #f9a8d4; border-radius: 13px; padding: 0; overflow: hidden; box-shadow: 0 8px 25px rgba(30,41,59,.25); }
         .road-hover-popup .leaflet-popup-content { margin: 0; width: 420px !important; max-width: calc(100vw - 34px); }
         .road-hover-popup .leaflet-popup-tip { background: #fff7fb; border: 1px solid #f9a8d4; }
+        a[href="https://change.forest.go.th/satellite"] { background-color: #047857 !important; color: #ffffff !important; border-color: #065f46 !important; text-shadow: 0 1px 1px rgba(0,0,0,.25); }
+        a[href="https://change.forest.go.th/satellite"] i { color: #ffffff !important; }
+        a[href="https://change.forest.go.th/satellite"]:hover { background-color: #065f46 !important; color: #ffffff !important; }
     </style>
 </head>
 <body class="flex flex-col h-screen">
@@ -587,6 +590,7 @@
                                 <span class="text-xs text-gray-500">รองรับรูปภาพ (JPG, PNG) สูงสุด 6 ภาพต่อโครงการ และไฟล์ PDF</span>
                             </div>
                             <div id="attachmentImageCounter" class="text-xs font-bold text-indigo-700">รูปภาพ 0 / 6 ภาพ</div>
+                            <div id="attachmentUploadStatus" class="hidden rounded-lg border px-3 py-2 text-xs font-bold" role="status" aria-live="polite"></div>
                             <div id="attachmentList" class="flex flex-col gap-2 mt-2"></div>
                         </div>
                     </div>
@@ -809,11 +813,11 @@
 
         const App = {
             state: {
-                map: null, layers: {}, currentLatLng: null, tempMarkers: { start: null, end: null }, currentLocationMarker: null, currentLocationCircle: null,
+                map: null, layers: {}, currentLatLng: null, tempMarkers: { start: null, end: null }, currentLocationMarker: null, currentLocationCircle: null, currentLocationWatchId: null,
                 previewLayer: null, kmlLayer: null, kmlPolygonLayer: null, currentGeoJSON: null, currentRoutes: [], currentRouteIndex: 0,
                 proposals: [], currentUser: null, isPicking: false, pickingType: null,
                 deleteTargetId: null, editingId: null, charts: { countChart: null, budgetChart: null },
-                attachments: [], existingAttachments: [], upgradeTargetId: null,
+                attachments: [], existingAttachments: [], attachmentUploadCache: new Map(), upgradeTargetId: null,
                 spatialLayers: { slope:null, flood:null, community:null, road:null, facility:null },
                 spatialLayerNames: {}, spatialResults: [], spatialDisplayLayer: null, spatialHighlightLayer: null,
                 forestLayer: null, forestFeatureLayers: new Map(), forestVisible: false,
@@ -1756,7 +1760,7 @@
                                 </div>
                                 <div class="px-4 py-3 text-[12px]">
                                     <div class="grid grid-cols-[115px_1fr] gap-y-2"><span class="text-gray-500">อำเภอ</span><b class="text-gray-800">${App.ui.escapeHtml(p.district || '-')}</b><span class="text-gray-500">หน่วยงาน</span><b class="text-gray-800">${App.ui.escapeHtml(p.agencyName || '-')}</b><span class="text-gray-500">ปีที่ดำเนินการ</span><b class="text-violet-700">${operationYearText}</b><span class="text-gray-500">งบประมาณ</span><b class="text-amber-700">${projectBudgetText}</b><span class="text-gray-500">ความยาวตามที่ขอ</span><b>${requestedDistance ? (requestedDistance/1000).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3})+' กม.' : '-'}</b><span class="text-gray-500">ความยาวบนแผนที่</span><b>${d ? (d/1000).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3})+' กม.' : '-'}</b></div>
-                                    <div class="mt-2 rounded-lg border border-pink-200 bg-pink-50/70 px-2.5 py-2 grid grid-cols-[92px_1fr] gap-y-1"><span class="text-gray-500">พิกัดจุดเริ่มต้น</span><b class="text-green-700">${formatCoord(startLat,startLng)}</b><span class="text-gray-500">พิกัดจุดสิ้นสุด</span><b class="text-red-600">${formatCoord(endLat,endLng)}</b></div>
+                                    <div class="mt-2 rounded-lg border border-pink-200 bg-pink-50/70 px-2.5 py-2 grid grid-cols-[92px_1fr] gap-y-1"><span class="text-gray-500">พิกัดจุดเริ่มต้น</span><b class="text-green-700">${formatCoord(startLat,startLng)}</b><span class="text-gray-500">พิกัดจุดสิ้นสุด</span><b class="text-red-600">${formatCoord(endLat,endLng)}</b><div class="col-span-2 mt-1.5 grid grid-cols-2 gap-1.5"><button type="button" onclick="App.features.copyProjectCoordinate(decodeURIComponent('${idToken}'),'start')" class="rounded border border-green-200 bg-white px-2 py-1.5 text-[10px] font-bold text-green-700 hover:bg-green-50" title="คัดลอกพิกัดจุดเริ่มต้นไปวางในเว็บไซต์พิทักษ์ไพร"><i class="fa-solid fa-copy mr-1"></i>คัดลอกจุดเริ่มต้น</button><button type="button" onclick="App.features.copyProjectCoordinate(decodeURIComponent('${idToken}'),'end')" class="rounded border border-red-200 bg-white px-2 py-1.5 text-[10px] font-bold text-red-700 hover:bg-red-50" title="คัดลอกพิกัดจุดสิ้นสุดไปวางในเว็บไซต์พิทักษ์ไพร"><i class="fa-solid fa-copy mr-1"></i>คัดลอกจุดสิ้นสุด</button></div><a href="https://change.forest.go.th/satellite" target="_blank" rel="noopener noreferrer" class="col-span-2 mt-1.5 rounded-lg border border-emerald-300 bg-emerald-600 px-2 py-2 text-center text-[10px] font-bold text-white hover:bg-emerald-700" title="เปิดระบบพิทักษ์ไพรในแท็บใหม่"><i class="fa-solid fa-up-right-from-square mr-1.5"></i>เปิดเว็บไซต์พิทักษ์ไพร</a><div class="col-span-2 mt-1 text-center text-[9px] text-gray-500">รูปแบบพร้อมวางในพิทักษ์ไพร: ละติจูด, ลองจิจูด</div></div>
                                     ${checklistOtherPanel}
                                     ${forestPanel}
                                     ${spkPanel}
@@ -2317,58 +2321,92 @@
                         App.ui.showToast('อุปกรณ์หรือเบราว์เซอร์นี้ไม่รองรับการระบุตำแหน่ง', 'error');
                         return;
                     }
-                    if(button) {
-                        button.disabled = true;
-                        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xl"></i>';
-                        button.title = 'กำลังค้นหาตำแหน่งปัจจุบัน';
+                    if(App.state.currentLocationWatchId !== null) {
+                        navigator.geolocation.clearWatch(App.state.currentLocationWatchId);
+                        App.state.currentLocationWatchId = null;
                     }
-                    App.ui.showToast('กำลังค้นหาตำแหน่งปัจจุบัน กรุณาอนุญาตการใช้ตำแหน่ง', 'info');
-                    navigator.geolocation.getCurrentPosition(position => {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
-                        const accuracy = Math.max(1, position.coords.accuracy || 1);
-                        if(App.state.currentLocationMarker) App.state.map.removeLayer(App.state.currentLocationMarker);
-                        if(App.state.currentLocationCircle) App.state.map.removeLayer(App.state.currentLocationCircle);
-                        const icon = L.divIcon({
-                            className: '',
-                            html: '<div class="current-location-pulse"></div>',
-                            iconSize: [20, 20],
-                            iconAnchor: [10, 10]
-                        });
-                        App.state.currentLocationCircle = L.circle([lat, lng], {
-                            radius: accuracy,
-                            color: '#2563eb',
-                            weight: 1.5,
-                            fillColor: '#60a5fa',
-                            fillOpacity: 0.14,
-                            interactive: false
-                        }).addTo(App.state.map);
-                        App.state.currentLocationMarker = L.marker([lat, lng], { icon, zIndexOffset: 2000 })
-                            .addTo(App.state.map)
-                            .bindPopup(`<div class="font-sans min-w-[220px]"><div class="font-bold text-blue-700 mb-2"><i class="fa-solid fa-location-crosshairs mr-1"></i> ตำแหน่งปัจจุบัน</div><div class="text-xs text-gray-700 leading-5">Lat: <b>${lat.toFixed(6)}</b><br>Lng: <b>${lng.toFixed(6)}</b><br>ความแม่นยำประมาณ: <b>${Math.round(accuracy).toLocaleString()} เมตร</b></div><div class="text-[10px] text-gray-500 mt-2 pt-2 border-t">กดปุ่มตำแหน่งอีกครั้งเพื่ออัปเดตพิกัด</div></div>`)
-                            .openPopup();
-                        App.state.currentLatLng = L.latLng(lat, lng);
-                        App.ui.updateCoordDisplay();
-                        App.state.map.fitBounds(App.state.currentLocationCircle.getBounds(), { padding: [55, 55], maxZoom: 17 });
-                        App.ui.showToast(`พบตำแหน่งปัจจุบันแล้ว (ความแม่นยำประมาณ ${Math.round(accuracy).toLocaleString()} เมตร)`, 'success');
+                    if(button) {
+                        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xl"></i>';
+                        button.title = 'กำลังปรับความแม่นยำของตำแหน่ง';
+                    }
+                    let bestAccuracy = Infinity;
+                    let hasPosition = false;
+                    let finished = false;
+                    let refineTimer = null;
+                    const resetButton = () => {
                         if(button) {
-                            button.disabled = false;
                             button.innerHTML = '<i class="fa-solid fa-location-crosshairs text-xl"></i>';
                             button.title = 'อัปเดตตำแหน่งปัจจุบัน';
                         }
+                    };
+                    const finishRefining = (reason = '') => {
+                        if(finished) return;
+                        finished = true;
+                        if(refineTimer) clearTimeout(refineTimer);
+                        if(App.state.currentLocationWatchId !== null) {
+                            navigator.geolocation.clearWatch(App.state.currentLocationWatchId);
+                            App.state.currentLocationWatchId = null;
+                        }
+                        resetButton();
+                        if(hasPosition) {
+                            const rounded = Math.round(bestAccuracy);
+                            const message = bestAccuracy <= 20
+                                ? `ยืนยันตำแหน่งแล้ว ความแม่นยำประมาณ ${rounded.toLocaleString()} เมตร`
+                                : `แสดงตำแหน่งที่ดีที่สุดแล้ว ความแม่นยำประมาณ ${rounded.toLocaleString()} เมตร${reason ? ' — ' + reason : ''}`;
+                            App.ui.showToast(message, bestAccuracy <= 50 ? 'success' : 'info');
+                        }
+                    };
+                    const showPosition = (position, sourceLabel = 'กำลังปรับความแม่นยำ') => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        const accuracy = Math.max(1, position.coords.accuracy || 1);
+                        if(hasPosition && accuracy >= bestAccuracy) return;
+                        const firstFix = !hasPosition;
+                        hasPosition = true;
+                        bestAccuracy = accuracy;
+                        const warning = accuracy > 100
+                            ? '<div class="mt-2 rounded bg-amber-50 border border-amber-200 px-2 py-1 text-[10px] font-bold text-amber-700">ความแม่นยำยังต่ำ หากเป็น iPad รุ่น Wi-Fi ตำแหน่งอาจอ้างอิงเครือข่ายแทน GPS</div>'
+                            : '';
+                        const popupHtml = `<div class="font-sans min-w-[230px]"><div class="font-bold text-blue-700 mb-2"><i class="fa-solid fa-location-crosshairs mr-1"></i> ตำแหน่งปัจจุบัน</div><div class="text-xs text-gray-700 leading-5">Lat: <b>${lat.toFixed(6)}</b><br>Lng: <b>${lng.toFixed(6)}</b><br>ความแม่นยำประมาณ: <b>${Math.round(accuracy).toLocaleString()} เมตร</b></div><div class="mt-2 text-[10px] font-bold text-blue-600"><i class="fa-solid fa-satellite-dish mr-1"></i>${sourceLabel}</div>${warning}</div>`;
+                        if(!App.state.currentLocationCircle) {
+                            App.state.currentLocationCircle = L.circle([lat, lng], { radius: accuracy, color: '#2563eb', weight: 1.5, fillColor: '#60a5fa', fillOpacity: 0.14, interactive: false }).addTo(App.state.map);
+                        } else {
+                            App.state.currentLocationCircle.setLatLng([lat, lng]);
+                            App.state.currentLocationCircle.setRadius(accuracy);
+                        }
+                        if(!App.state.currentLocationMarker) {
+                            const icon = L.divIcon({ className: '', html: '<div class="current-location-pulse"></div>', iconSize: [20, 20], iconAnchor: [10, 10] });
+                            App.state.currentLocationMarker = L.marker([lat, lng], { icon, zIndexOffset: 2000 }).addTo(App.state.map).bindPopup(popupHtml);
+                        } else {
+                            App.state.currentLocationMarker.setLatLng([lat, lng]);
+                            App.state.currentLocationMarker.setPopupContent(popupHtml);
+                        }
+                        App.state.currentLocationMarker.openPopup();
+                        App.state.currentLatLng = L.latLng(lat, lng);
+                        App.ui.updateCoordDisplay();
+                        if(firstFix) App.state.map.fitBounds(App.state.currentLocationCircle.getBounds(), { padding: [55, 55], maxZoom: 17 });
+                        if(accuracy <= 20) finishRefining();
+                    };
+                    App.ui.showToast('กำลังแสดงตำแหน่งล่าสุด แล้วปรับความแม่นยำต่อเนื่อง', 'info');
+                    navigator.geolocation.getCurrentPosition(
+                        position => showPosition(position, 'แสดงตำแหน่งล่าสุดแล้ว กำลังตรวจสอบให้แม่นยำขึ้น'),
+                        () => {},
+                        { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+                    );
+                    App.state.currentLocationWatchId = navigator.geolocation.watchPosition(position => {
+                        showPosition(position, position.coords.accuracy <= 20 ? 'ตำแหน่งแม่นยำพร้อมใช้งาน' : 'กำลังปรับความแม่นยำต่อเนื่อง');
                     }, error => {
                         const messages = {
                             1: 'ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง กรุณาอนุญาต Location ในเบราว์เซอร์',
                             2: 'ไม่สามารถรับตำแหน่งได้ กรุณาเปิด GPS หรือตรวจสอบสัญญาณ',
-                            3: 'ค้นหาตำแหน่งนานเกินไป กรุณาลองใหม่อีกครั้ง'
+                            3: 'กำลังใช้ตำแหน่งล่าสุด เนื่องจากค้นหาตำแหน่งใหม่ใช้เวลานาน'
                         };
-                        App.ui.showToast(messages[error.code] || 'เกิดข้อผิดพลาดในการค้นหาตำแหน่ง', 'error');
-                        if(button) {
-                            button.disabled = false;
-                            button.innerHTML = '<i class="fa-solid fa-location-crosshairs text-xl"></i>';
-                            button.title = 'แสดงตำแหน่งปัจจุบัน';
+                        if(!hasPosition) {
+                            App.ui.showToast(messages[error.code] || 'เกิดข้อผิดพลาดในการค้นหาตำแหน่ง', 'error');
+                            finishRefining();
                         }
-                    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+                    }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 3000 });
+                    refineTimer = setTimeout(() => finishRefining(bestAccuracy > 100 ? 'ควรตรวจสอบจุดบนแผนที่ก่อนใช้งาน' : ''), 20000);
                 },
                 openStreetView() { App.state.isPicking = true; App.state.pickingType = 'streetview'; App.map.setPickingOverlayInteractivity(true); App.ui.closeModal('proposalModal'); const ov = document.getElementById('pickingOverlay'); ov.className = 'absolute top-6 left-1/2 transform -translate-x-1/2 z-[2000] bg-orange-500 text-white px-6 py-3 rounded-full shadow-2xl font-bold flex items-center gap-3 pointer-events-none transition-all'; document.getElementById('pickingText').innerHTML = 'คลิกจุดบนแผนที่ เพื่อเปิด <b>Street View</b>'; document.getElementById('map').style.cursor = 'crosshair'; },
                 openNewProposalForm() { 
@@ -2397,7 +2435,7 @@
                     App.state.editingId = null; document.getElementById('dataForm').reset(); App.state.currentGeoJSON = null; this.updateDistanceDisplay(null);
                     App.ui.updateBudgetYears(cBudgetStartYear, false);
                     App.state.currentRoutes = []; App.state.currentRouteIndex = 0; 
-                    App.state.attachments = []; App.state.existingAttachments = []; this.renderAttachments();
+                    App.state.attachments = []; App.state.existingAttachments = []; App.state.attachmentUploadCache.clear(); this.renderAttachments(); this.setAttachmentUploadStatus();
                     
                     const btnAlt = document.getElementById('btnAltRoute'); if(btnAlt) btnAlt.classList.add('hidden');
                     document.getElementById('btnSaveProposal').innerHTML = '<i class="fa-solid fa-floppy-disk mr-1.5"></i> บันทึกแล้วปิด';
@@ -2464,6 +2502,81 @@
                 isImageAttachment(file) {
                     return !!file && ((typeof file.type === 'string' && file.type.startsWith('image/')) || (typeof file.url === 'string' && (file.url.startsWith('data:image/') || /\.(jpe?g|png|gif|webp)(\?|$)/i.test(file.url))));
                 },
+                setAttachmentUploadStatus(message = '', tone = 'info') {
+                    const status = document.getElementById('attachmentUploadStatus');
+                    if(!status) return;
+                    if(!message) {
+                        status.textContent = '';
+                        status.className = 'hidden rounded-lg border px-3 py-2 text-xs font-bold';
+                        return;
+                    }
+                    const tones = {
+                        info: 'border-blue-200 bg-blue-50 text-blue-700',
+                        progress: 'border-amber-300 bg-amber-50 text-amber-800',
+                        success: 'border-emerald-300 bg-emerald-50 text-emerald-800',
+                        error: 'border-red-300 bg-red-50 text-red-700'
+                    };
+                    status.textContent = message;
+                    status.className = `rounded-lg border px-3 py-2 text-xs font-bold ${tones[tone] || tones.info}`;
+                },
+                async optimizeAttachmentForUpload(file) {
+                    if(!file || !(file.type || '').startsWith('image/')) return { blob:file, name:file?.name || 'attachment', type:file?.type || 'application/octet-stream' };
+                    const sourceUrl = URL.createObjectURL(file);
+                    try {
+                        const image = await new Promise((resolve, reject) => {
+                            const img = new Image();
+                            const timer = setTimeout(() => reject(new Error('ประมวลผลรูปภาพเกินเวลา')), 30000);
+                            img.onload = () => { clearTimeout(timer); resolve(img); };
+                            img.onerror = () => { clearTimeout(timer); reject(new Error('ไม่สามารถอ่านรูปนี้ได้ กรุณาตั้งค่ากล้องเป็น Most Compatible หรือเลือกรูป JPG')); };
+                            img.src = sourceUrl;
+                        });
+                        const maxDimension = 1400;
+                        let width = image.naturalWidth || image.width;
+                        let height = image.naturalHeight || image.height;
+                        const scale = Math.min(1, maxDimension / Math.max(width, height));
+                        width = Math.max(1, Math.round(width * scale));
+                        height = Math.max(1, Math.round(height * scale));
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const context = canvas.getContext('2d', { alpha:false });
+                        context.fillStyle = '#ffffff';
+                        context.fillRect(0, 0, width, height);
+                        context.drawImage(image, 0, 0, width, height);
+                        const blob = await new Promise((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('ไม่สามารถบีบอัดรูปภาพได้')), 'image/jpeg', 0.72));
+                        const baseName = String(file.name || `photo_${Date.now()}`).replace(/\.[^.]+$/, '');
+                        return { blob, name:`${baseName}.jpg`, type:'image/jpeg' };
+                    } finally {
+                        URL.revokeObjectURL(sourceUrl);
+                    }
+                },
+                async uploadAttachmentWithRetry(file, projectId, index, total) {
+                    if(!storage) throw new Error('ระบบจัดเก็บรูปภาพยังไม่พร้อม กรุณาตรวจสอบอินเทอร์เน็ตแล้วกดบันทึกอีกครั้ง');
+                    const optimized = await this.optimizeAttachmentForUpload(file);
+                    const safeFileName = String(optimized.name || `attachment_${index + 1}`).replace(/[^a-zA-Z0-9.\-_]/g, '_');
+                    const fileRef = ref(storage, `artifacts/${canvasAppId}/public/data/proposals/${projectId}/${Date.now()}_${index + 1}_${safeFileName}`);
+                    let lastError = null;
+                    for(let attempt = 1; attempt <= 3; attempt++) {
+                        this.setAttachmentUploadStatus(`กำลังอัปโหลดไฟล์ที่ ${index + 1}/${total}${attempt > 1 ? ` — ลองใหม่ครั้งที่ ${attempt}` : ''}`, 'progress');
+                        try {
+                            const uploadPromise = uploadBytes(fileRef, optimized.blob, { contentType:optimized.type }).then(() => getDownloadURL(fileRef));
+                            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('อัปโหลดเกิน 120 วินาที')), 120000));
+                            const url = await Promise.race([uploadPromise, timeoutPromise]);
+                            return { name:optimized.name, url, type:optimized.type };
+                        } catch(error) {
+                            lastError = error;
+                            if(attempt < 3) await new Promise(resolve => setTimeout(resolve, 1500 * attempt));
+                        }
+                    }
+                    throw new Error(`อัปโหลด ${file.name || 'ไฟล์แนบ'} ไม่สำเร็จ: ${lastError?.message || 'สัญญาณอินเทอร์เน็ตขัดข้อง'}`);
+                },
+                async migrateInlineAttachment(attachment, projectId, index, total) {
+                    if(!attachment?.url?.startsWith('data:')) return attachment;
+                    const response = await fetch(attachment.url);
+                    const blob = await response.blob();
+                    const file = new File([blob], attachment.name || `attachment_${index + 1}`, { type:attachment.type || blob.type || 'application/octet-stream' });
+                    return this.uploadAttachmentWithRetry(file, projectId, index, total);
+                },
                 handleFileSelect(evt) {
                     const files = Array.from(evt.target.files || []);
                     const currentImageCount = [...App.state.existingAttachments, ...App.state.attachments].filter(file => this.isImageAttachment(file)).length;
@@ -2479,6 +2592,7 @@
                     });
                     App.state.attachments = [...App.state.attachments, ...acceptedFiles];
                     this.renderAttachments();
+                    if(acceptedFiles.length > 0) this.setAttachmentUploadStatus(`เลือกไฟล์แล้ว ${acceptedFiles.length} ไฟล์ — กด “บันทึกแล้วปิด” เพื่อบีบอัดและอัปโหลด`, 'info');
                     if(rejectedImageCount > 0) App.ui.showToast(`แนบรูปได้สูงสุด ${MAX_PROJECT_IMAGES} ภาพต่อโครงการ ระบบข้าม ${rejectedImageCount} ภาพที่เกิน`, 'error');
                     evt.target.value = '';
                 },
@@ -2598,6 +2712,42 @@
                     if(foundLayer && foundLayer.getBounds && foundLayer.getBounds().isValid()) App.state.map.fitBounds(foundLayer.getBounds(), { padding: [50, 50] });
                     else if(p.coordinates?.startLat && !isNaN(p.coordinates.startLat)) App.state.map.flyTo([p.coordinates.startLat, p.coordinates.startLng], 15);
                 },
+                async copyProjectCoordinate(id, point = 'start') {
+                    const project = App.state.proposals.find(item => item.id === id);
+                    if(!project) return App.ui.showToast('ไม่พบข้อมูลโครงการ', 'error');
+                    const isEnd = point === 'end';
+                    const lat = Number(isEnd ? project.coordinates?.endLat : project.coordinates?.startLat);
+                    const lng = Number(isEnd ? project.coordinates?.endLng : project.coordinates?.startLng);
+                    if(!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                        return App.ui.showToast(`โครงการนี้ไม่มีพิกัดจุด${isEnd ? 'สิ้นสุด' : 'เริ่มต้น'}`, 'error');
+                    }
+                    const coordinateText = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                    let copied = false;
+                    try {
+                        if(navigator.clipboard?.writeText) {
+                            await navigator.clipboard.writeText(coordinateText);
+                            copied = true;
+                        }
+                    } catch(error) {
+                        console.warn('Clipboard API unavailable, using fallback:', error);
+                    }
+                    if(!copied) {
+                        const textarea = document.createElement('textarea');
+                        textarea.value = coordinateText;
+                        textarea.setAttribute('readonly', '');
+                        textarea.style.position = 'fixed';
+                        textarea.style.left = '-9999px';
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        try { copied = document.execCommand('copy'); } catch(error) { copied = false; }
+                        textarea.remove();
+                    }
+                    if(copied) {
+                        App.ui.showToast(`คัดลอกพิกัดจุด${isEnd ? 'สิ้นสุด' : 'เริ่มต้น'}แล้ว: ${coordinateText}`, 'success');
+                    } else {
+                        window.prompt('คัดลอกพิกัดนี้แล้วนำไปวางในเว็บไซต์พิทักษ์ไพร', coordinateText);
+                    }
+                },
                 
                 openProposalDetail(id) {
                     const p = App.state.proposals.find(x => x.id === id); if(!p) return;
@@ -2633,7 +2783,10 @@
                     }
 
                     const distanceCardsHtml = `<div class="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-2 mt-2"><div class="bg-amber-50 border border-amber-200 p-3 rounded flex justify-between"><span class="font-bold text-amber-800 text-xs"><i class="fa-solid fa-road mr-2"></i>ระยะทางที่เสนอของบประมาณ:</span><span class="font-bold text-amber-700">${docDist ? docDist.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' เมตร' : '-'}</span></div><div class="bg-sky-50 border border-sky-200 p-3 rounded flex justify-between"><span class="font-bold text-sky-800 text-xs"><i class="fa-solid fa-ruler mr-2"></i>ระยะทางบนแผนที่:</span><span class="font-bold text-sky-700">${d>0?d.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' เมตร':'-'}</span></div></div>`;
-                    document.getElementById('detailContent').innerHTML = `${warn}${selectionBanner}<div class="grid grid-cols-2 gap-3 text-sm"><div class="col-span-2 border-b pb-2 mb-2 flex justify-between items-center"><span class="font-bold">สถานะ:</span> <span class="bg-amber-100 px-2 py-1 rounded font-bold">${p.status||'รอพิจารณา'}</span> <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-bold">ลำดับที่ ${App.ui.getProjectSequence(p)}</span></div><div><span class="text-gray-500 block text-xs">อำเภอ</span><div class="font-bold">${p.district||'-'}</div></div><div><span class="text-gray-500 block text-xs">ตำบล</span><div class="font-bold text-teal-700">${App.ui.escapeHtml(App.ui.getSubdistrict(p)||'-')}</div></div><div><span class="text-gray-500 block text-xs">หน่วยงานที่ขอ</span><div class="font-bold">${p.agencyName||'-'}</div></div><div><span class="text-gray-500 block text-xs">ปีที่ของบประมาณ</span><div class="font-bold text-violet-700">${App.ui.getBudgetRequestYears(p).join(', ')||'-'}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">ประเภทของงบประมาณ</span><div class="font-bold text-blue-800">${App.ui.escapeHtml(p.budgetType||'-')}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">ชื่อโครงการ</span><div class="font-medium">${App.ui.escapeHtml(App.ui.getProjectName(p)||'-')}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">รายละเอียดโครงการ</span><div>${p.projectDetails||'-'}</div>${distCompareHtml}</div>${distanceCardsHtml}<div class="col-span-2">${forestDetail}${spkDetail}</div>${attHtml}</div>`;
+                    const startCoordinate = Number.isFinite(Number(p.coordinates?.startLat)) && Number.isFinite(Number(p.coordinates?.startLng)) ? `${Number(p.coordinates.startLat).toFixed(6)}, ${Number(p.coordinates.startLng).toFixed(6)}` : '-';
+                    const endCoordinate = Number.isFinite(Number(p.coordinates?.endLat)) && Number.isFinite(Number(p.coordinates?.endLng)) ? `${Number(p.coordinates.endLat).toFixed(6)}, ${Number(p.coordinates.endLng).toFixed(6)}` : '-';
+                    const coordinateCopyHtml = `<div class="col-span-2 mt-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3"><div class="text-xs font-bold text-emerald-800 mb-2"><i class="fa-solid fa-tree mr-1.5"></i>คัดลอกพิกัดไปใช้ในเว็บไซต์พิทักษ์ไพร</div><div class="grid grid-cols-1 md:grid-cols-2 gap-2"><button type="button" onclick="App.features.copyProjectCoordinate('${p.id}','start')" class="rounded-lg border border-green-200 bg-white px-3 py-2 text-left hover:bg-green-50"><span class="block text-[10px] text-gray-500">จุดเริ่มต้น</span><b class="text-xs text-green-700"><i class="fa-solid fa-copy mr-1"></i>${startCoordinate}</b></button><button type="button" onclick="App.features.copyProjectCoordinate('${p.id}','end')" class="rounded-lg border border-red-200 bg-white px-3 py-2 text-left hover:bg-red-50"><span class="block text-[10px] text-gray-500">จุดสิ้นสุด</span><b class="text-xs text-red-700"><i class="fa-solid fa-copy mr-1"></i>${endCoordinate}</b></button></div><a href="https://change.forest.go.th/satellite" target="_blank" rel="noopener noreferrer" class="mt-2 flex w-full items-center justify-center rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700"><i class="fa-solid fa-up-right-from-square mr-1.5"></i>เปิดเว็บไซต์พิทักษ์ไพร</a><div class="mt-2 text-[10px] text-emerald-700">กดปุ่มแล้วนำไปวางในช่อง “พิกัด” ของระบบพิทักษ์ไพรได้ทันที</div></div>`;
+                    document.getElementById('detailContent').innerHTML = `${warn}${selectionBanner}<div class="grid grid-cols-2 gap-3 text-sm"><div class="col-span-2 border-b pb-2 mb-2 flex justify-between items-center"><span class="font-bold">สถานะ:</span> <span class="bg-amber-100 px-2 py-1 rounded font-bold">${p.status||'รอพิจารณา'}</span> <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-bold">ลำดับที่ ${App.ui.getProjectSequence(p)}</span></div><div><span class="text-gray-500 block text-xs">อำเภอ</span><div class="font-bold">${p.district||'-'}</div></div><div><span class="text-gray-500 block text-xs">ตำบล</span><div class="font-bold text-teal-700">${App.ui.escapeHtml(App.ui.getSubdistrict(p)||'-')}</div></div><div><span class="text-gray-500 block text-xs">หน่วยงานที่ขอ</span><div class="font-bold">${p.agencyName||'-'}</div></div><div><span class="text-gray-500 block text-xs">ปีที่ของบประมาณ</span><div class="font-bold text-violet-700">${App.ui.getBudgetRequestYears(p).join(', ')||'-'}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">ประเภทของงบประมาณ</span><div class="font-bold text-blue-800">${App.ui.escapeHtml(p.budgetType||'-')}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">ชื่อโครงการ</span><div class="font-medium">${App.ui.escapeHtml(App.ui.getProjectName(p)||'-')}</div></div><div class="col-span-2"><span class="text-gray-500 block text-xs">รายละเอียดโครงการ</span><div>${p.projectDetails||'-'}</div>${distCompareHtml}</div>${distanceCardsHtml}${coordinateCopyHtml}<div class="col-span-2">${forestDetail}${spkDetail}</div>${attHtml}</div>`;
                     document.getElementById('btnEditProposal').onclick = () => { App.ui.closeModal('detailModal'); App.features.editProject(id); }; App.ui.openModal('detailModal');
                 },
                 editProject(id) {
@@ -3031,7 +3184,7 @@
                         const spkClass = !spk.available ? 'text-gray-500' : spk.intersects ? 'text-amber-800 font-bold' : 'text-emerald-700 font-bold';
                         const otherText = String(project.checklist?.otherText || '').trim();
                         const otherResult = otherText ? `<div class="mt-1 pt-1 border-t border-dotted border-red-200 text-red-600 font-bold"><b>ข้อ 5 อื่นๆ:</b> ${App.ui.escapeHtml(otherText)}</div>` : '';
-                        return `<tr class="border-b hover:bg-purple-50/60"><td class="p-3 text-center font-bold text-purple-700">${index + 1}</td><td class="p-3"><div class="font-bold">อ.${App.ui.escapeHtml(project.district || '-')}</div><div class="text-[10px] text-gray-500">${App.ui.escapeHtml(project.agencyName || '-')}</div></td><td class="p-3 font-bold text-teal-700">${App.ui.escapeHtml(App.ui.getSubdistrict(project) || '-')}</td><td class="p-3 text-center font-bold text-violet-700 whitespace-nowrap">${displayedYears.length ? displayedYears.join(', ') : '-'}</td><td class="p-3 max-w-[360px] whitespace-normal"><div class="font-bold text-gray-800">${App.ui.escapeHtml(App.ui.getProjectName(project) || 'ไม่มีชื่อโครงการ')}</div><div class="text-[10px] text-gray-500">ลำดับ ${App.ui.getProjectSequence(project)}</div></td><td class="p-3">${App.ui.escapeHtml(project.budgetType || '-')}</td><td class="p-3 text-right whitespace-nowrap">${requested ? (requested / 1000).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' กม.' : '-'}</td><td class="p-3 text-right whitespace-nowrap">${mapped ? (mapped / 1000).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' กม.' : '-'}</td><td class="p-3 text-right font-bold whitespace-nowrap">${budget ? budget.toLocaleString('en-US',{maximumFractionDigits:2}) : '-'}</td><td class="p-3 max-w-[280px] whitespace-normal text-[10px]"><div class="${forestClass}"><b>ป่า:</b> ${App.ui.escapeHtml(App.forest.resultText(forest))}</div><div class="mt-1 pt-1 border-t border-dotted ${spkClass}"><b>ส.ป.ก.:</b> ${App.ui.escapeHtml(App.spk.resultText(spk))}</div>${otherResult}</td><td class="p-3"><span class="inline-block bg-slate-100 text-slate-700 border border-slate-200 rounded px-2 py-1 font-bold whitespace-normal">${App.ui.escapeHtml(status)}</span></td><td class="p-3 text-center whitespace-nowrap sticky right-0 bg-white shadow-[-4px_0_8px_rgba(0,0,0,0.04)]"><button type="button" onclick="App.features.openProposalDetail('${project.id}')" class="bg-sky-100 text-sky-700 hover:bg-sky-200 px-2 py-1.5 rounded text-xs mr-1" title="ดูรายละเอียดโครงการ"><i class="fa-solid fa-info"></i></button><button type="button" onclick="App.ui.closeModal('districtSummaryModal'); App.features.panTo('${project.id}')" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-2 py-1.5 rounded text-xs mr-1" title="แสดงโครงการบนแผนที่"><i class="fa-solid fa-map"></i></button><button type="button" onclick="App.ui.closeModal('districtSummaryModal'); App.features.editProject('${project.id}')" class="bg-amber-100 text-amber-700 hover:bg-amber-200 px-2 py-1.5 rounded text-xs mr-1" title="แก้ไขข้อมูลโครงการ"><i class="fa-solid fa-pen-to-square"></i></button><button type="button" onclick="App.features.confirmDelete('${project.id}')" class="bg-red-100 text-red-700 hover:bg-red-200 px-2.5 py-1.5 rounded text-xs font-bold" title="ลบโครงการ"><i class="fa-solid fa-trash-can mr-1"></i>ลบ</button></td></tr>`;
+                        return `<tr class="border-b hover:bg-purple-50/60"><td class="p-3 text-center font-bold text-purple-700">${index + 1}</td><td class="p-3"><div class="font-bold">อ.${App.ui.escapeHtml(project.district || '-')}</div><div class="text-[10px] text-gray-500">${App.ui.escapeHtml(project.agencyName || '-')}</div></td><td class="p-3 font-bold text-teal-700">${App.ui.escapeHtml(App.ui.getSubdistrict(project) || '-')}</td><td class="p-3 text-center font-bold text-violet-700 whitespace-nowrap">${displayedYears.length ? displayedYears.join(', ') : '-'}</td><td class="p-3 max-w-[360px] whitespace-normal"><div class="font-bold text-gray-800">${App.ui.escapeHtml(App.ui.getProjectName(project) || 'ไม่มีชื่อโครงการ')}</div><div class="text-[10px] text-gray-500">ลำดับ ${index + 1}</div></td><td class="p-3">${App.ui.escapeHtml(project.budgetType || '-')}</td><td class="p-3 text-right whitespace-nowrap">${requested ? (requested / 1000).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' กม.' : '-'}</td><td class="p-3 text-right whitespace-nowrap">${mapped ? (mapped / 1000).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' กม.' : '-'}</td><td class="p-3 text-right font-bold whitespace-nowrap">${budget ? budget.toLocaleString('en-US',{maximumFractionDigits:2}) : '-'}</td><td class="p-3 max-w-[280px] whitespace-normal text-[10px]"><div class="${forestClass}"><b>ป่า:</b> ${App.ui.escapeHtml(App.forest.resultText(forest))}</div><div class="mt-1 pt-1 border-t border-dotted ${spkClass}"><b>ส.ป.ก.:</b> ${App.ui.escapeHtml(App.spk.resultText(spk))}</div>${otherResult}</td><td class="p-3"><span class="inline-block bg-slate-100 text-slate-700 border border-slate-200 rounded px-2 py-1 font-bold whitespace-normal">${App.ui.escapeHtml(status)}</span></td><td class="p-3 text-center whitespace-nowrap sticky right-0 bg-white shadow-[-4px_0_8px_rgba(0,0,0,0.04)]"><button type="button" onclick="App.features.openProposalDetail('${project.id}')" class="bg-sky-100 text-sky-700 hover:bg-sky-200 px-2 py-1.5 rounded text-xs mr-1" title="ดูรายละเอียดโครงการ"><i class="fa-solid fa-info"></i></button><button type="button" onclick="App.ui.closeModal('districtSummaryModal'); App.features.panTo('${project.id}')" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-2 py-1.5 rounded text-xs mr-1" title="แสดงโครงการบนแผนที่"><i class="fa-solid fa-map"></i></button><button type="button" onclick="App.ui.closeModal('districtSummaryModal'); App.features.editProject('${project.id}')" class="bg-amber-100 text-amber-700 hover:bg-amber-200 px-2 py-1.5 rounded text-xs mr-1" title="แก้ไขข้อมูลโครงการ"><i class="fa-solid fa-pen-to-square"></i></button><button type="button" onclick="App.features.confirmDelete('${project.id}')" class="bg-red-100 text-red-700 hover:bg-red-200 px-2.5 py-1.5 rounded text-xs font-bold" title="ลบโครงการ"><i class="fa-solid fa-trash-can mr-1"></i>ลบ</button></td></tr>`;
                     }).join('');
                 },
                 printDistrictSummary() {
@@ -3155,61 +3308,34 @@
                         const id = isContinuous ? ('P_' + Date.now()) : (App.state.editingId || 'P_' + Date.now());
                         if (isContinuous) { App.state.editingId = null; }
 
-                        let finalAttachments = [...App.state.existingAttachments];
-                        
-                        if (App.state.attachments.length > 0) {
-                            App.ui.showToast("กำลังประมวลผลไฟล์ โปรดรอสักครู่...", "info");
-                            
-                            const processFile = file => new Promise((resolve, reject) => {
-                                const timeout = setTimeout(() => reject(new Error("แปลงไฟล์เกินเวลา")), 8000);
-                                if(file.type && file.type.startsWith('image/')) {
-                                    const reader = new FileReader();
-                                    reader.onload = e => {
-                                        const img = new Image();
-                                        img.onload = () => {
-                                            clearTimeout(timeout);
-                                            const canvas = document.createElement('canvas');
-                                            let w = img.width, h = img.height; const max = 1200;
-                                            if(w > h && w > max) { h *= max/w; w = max; } else if (h > max) { w *= max/h; h = max; }
-                                            canvas.width = w; canvas.height = h;
-                                            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                                            resolve(canvas.toDataURL('image/jpeg', 0.7)); 
-                                        };
-                                        img.onerror = () => { clearTimeout(timeout); reject(new Error("รูปภาพไม่ถูกต้อง")); };
-                                        img.src = e.target.result;
-                                    };
-                                    reader.onerror = error => { clearTimeout(timeout); reject(error); };
-                                    reader.readAsDataURL(file);
-                                } else {
-                                    const reader = new FileReader();
-                                    reader.onload = () => { clearTimeout(timeout); resolve(reader.result); };
-                                    reader.onerror = error => { clearTimeout(timeout); reject(error); };
-                                    reader.readAsDataURL(file);
-                                }
-                            });
-
-                            for (const file of App.state.attachments) {
-                                try {
-                                    const b64Data = await processFile(file); 
-                                    let uploadedUrl = null;
-                                    
-                                    if (storage && db) {
-                                        try {
-                                            const safeFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-                                            const fileRef = ref(storage, `artifacts/${canvasAppId}/public/data/proposals/${id}/${Date.now()}_${safeFileName}`);
-                                            const uploadPromise = uploadBytes(fileRef, file).then(() => getDownloadURL(fileRef));
-                                            const timeoutPromise = new Promise((_, rej) => setTimeout(() => rej(new Error("คลาวด์ไม่ตอบสนอง")), 6000));
-                                            uploadedUrl = await Promise.race([uploadPromise, timeoutPromise]);
-                                        } catch (cloudErr) {
-                                            console.warn("Cloud storage fallback used:", cloudErr);
-                                        }
-                                    }
-                                    finalAttachments.push({ name: file.name, url: uploadedUrl || b64Data, type: file.type });
-                                } catch(err) {
-                                    console.error(err); App.ui.showToast(`ข้ามไฟล์ ${file.name}`, "error");
-                                }
+                        let finalAttachments = [];
+                        const inlineAttachments = App.state.existingAttachments.filter(attachment => attachment?.url?.startsWith('data:'));
+                        const uploadTotal = inlineAttachments.length + App.state.attachments.length;
+                        let uploadIndex = 0;
+                        if(uploadTotal > 0) {
+                            App.ui.showToast(`กำลังบีบอัดและอัปโหลดไฟล์ 0/${uploadTotal} กรุณาอย่าปิดหน้าต่าง`, 'info');
+                            App.features.setAttachmentUploadStatus(`กำลังเตรียมอัปโหลดไฟล์ 0/${uploadTotal} — กรุณาอย่าปิดหน้าต่าง`, 'progress');
+                        }
+                        for(const attachment of App.state.existingAttachments) {
+                            if(attachment?.url?.startsWith('data:')) {
+                                const migrated = await App.features.migrateInlineAttachment(attachment, id, uploadIndex, uploadTotal);
+                                finalAttachments.push(migrated);
+                                uploadIndex++;
+                            } else {
+                                finalAttachments.push(attachment);
                             }
                         }
+                        for(const file of App.state.attachments) {
+                            const cacheKey = `${file.name}|${file.size}|${file.lastModified}`;
+                            let uploaded = App.state.attachmentUploadCache.get(cacheKey);
+                            if(!uploaded) {
+                                uploaded = await App.features.uploadAttachmentWithRetry(file, id, uploadIndex, uploadTotal);
+                                App.state.attachmentUploadCache.set(cacheKey, uploaded);
+                            }
+                            finalAttachments.push(uploaded);
+                            uploadIndex++;
+                        }
+                        if(uploadTotal > 0) App.features.setAttachmentUploadStatus(`อัปโหลดไฟล์ครบ ${uploadTotal}/${uploadTotal} แล้ว กำลังบันทึกข้อมูลโครงการ`, 'success');
 
                         const sanitizedAttachments = finalAttachments.map(att => ({
                             name: att?.name || 'unnamed_file', url: att?.url || '', type: att?.type || ''
@@ -3300,7 +3426,8 @@
                             App.ui.updateOrdinanceFolderCount();
                         }
                         
-                        App.ui.showToast("บันทึกข้อมูลและลำดับโครงการสำเร็จ", "success"); 
+                        App.features.setAttachmentUploadStatus('บันทึกข้อมูลและรูปภาพครบแล้ว', 'success');
+                        App.ui.showToast("บันทึกข้อมูลและรูปภาพครบแล้ว", "success"); 
                         
                         if(isContinuous) {
                             App.features.clearForm(true); 
@@ -3317,6 +3444,7 @@
                         
                     } catch(e) { 
                         console.error("Save Error:", e); 
+                        App.features.setAttachmentUploadStatus(`บันทึกยังไม่สำเร็จ: ${e.message} — ข้อมูลและรูปที่เลือกยังอยู่ กดบันทึกอีกครั้งได้`, 'error');
                         App.ui.showToast(`บันทึกไม่สำเร็จ: ${e.message}`, "error"); 
                     } finally { 
                         if (App.state.editingId) {
