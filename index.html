@@ -43,6 +43,30 @@
         a[href="https://change.forest.go.th/satellite"] { background-color: #047857 !important; color: #ffffff !important; border-color: #065f46 !important; text-shadow: 0 1px 1px rgba(0,0,0,.25); }
         a[href="https://change.forest.go.th/satellite"] i { color: #ffffff !important; }
         a[href="https://change.forest.go.th/satellite"]:hover { background-color: #065f46 !important; color: #ffffff !important; }
+        #mobileFieldToolbar { display: none; }
+        #mapProjectFilterPanel { overflow: visible; }
+        #mobileFilterToggle { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 7px; color: #4338ca; background: #eef2ff; }
+        #mapProjectFilterBody { position: absolute; left: 0; bottom: calc(100% + 7px); width: 224px; padding: 8px; border: 1px solid #c7d2fe; border-radius: 10px; background: rgba(255,255,255,.98); box-shadow: 0 10px 28px rgba(15,23,42,.22); backdrop-filter: blur(10px); }
+        #mapProjectFilterBody.mobile-collapsed { display: none; }
+        @media (max-width: 1024px) and (pointer: coarse), (max-width: 767px) {
+            header { height: 56px !important; padding: 8px 12px !important; }
+            header svg { width: 24px !important; height: 24px !important; margin-right: 8px !important; }
+            header h1 { font-size: 14px !important; line-height: 1.15 !important; }
+            header p { font-size: 10px !important; margin-top: 2px !important; }
+            #desktopActionPanel, #desktopMapTools, #coordinatePanel { display: none !important; }
+            #mapProjectFilterPanel { left: 8px !important; bottom: 76px !important; width: min(218px, calc(100vw - 76px)) !important; }
+            #mapProjectFilterPanel.mobile-filter-collapsed { width: 176px !important; padding: 7px 9px !important; }
+            #mapProjectFilterPanel.mobile-filter-collapsed .map-filter-header { margin-bottom: 0 !important; padding-bottom: 0 !important; border-bottom-color: transparent !important; }
+            #mapProjectFilterBody { width: min(218px, calc(100vw - 76px)); }
+            #mapLayerManager { top: 70px !important; right: 8px !important; }
+            .leaflet-top.leaflet-right { top: 112px !important; }
+            .leaflet-bottom.leaflet-right { bottom: 78px !important; }
+            .road-hover-popup .leaflet-popup-content { width: min(430px, calc(100vw - 28px)) !important; max-height: 62vh; overflow-y: auto; }
+            #mobileFieldToolbar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); position: fixed; left: 8px; right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); z-index: 2600; overflow: hidden; border: 1px solid #bfdbfe; border-radius: 16px; background: rgba(255,255,255,.97); box-shadow: 0 10px 30px rgba(15,23,42,.28); backdrop-filter: blur(12px); }
+            #mobileFieldToolbar button { min-height: 58px; padding: 6px 2px; color: #1e3a8a; font-size: 10px; font-weight: 700; border-right: 1px solid #dbeafe; }
+            #mobileFieldToolbar button:last-child { border-right: 0; }
+            #mobileFieldToolbar i { display: block; margin-bottom: 4px; font-size: 18px; }
+        }
     </style>
 </head>
 <body class="flex flex-col h-screen">
@@ -64,7 +88,7 @@
         <div id="map"></div>
 
         <!-- Floating Buttons (Left) -->
-        <div class="absolute top-6 left-6 z-[500] flex flex-col gap-2 w-64 max-h-[calc(100%-8rem)] overflow-y-auto overflow-x-hidden custom-scroll pr-1 pointer-events-auto">
+        <div id="desktopActionPanel" class="absolute top-6 left-6 z-[500] flex flex-col gap-2 w-64 max-h-[calc(100%-8rem)] overflow-y-auto overflow-x-hidden custom-scroll pr-1 pointer-events-auto">
             <button onclick="App.features.openNewProposalForm()" class="pointer-events-auto bg-white/95 backdrop-blur-sm shadow-md border border-gray-200 hover:bg-blue-50 text-blue-700 font-bold py-3 px-4 rounded-lg text-sm flex items-center justify-start transition-all active:scale-95">
                 <i class="fa-solid fa-file-circle-plus w-6 text-center mr-3 text-lg"></i> ป้อนรายละเอียดโครงการ
             </button>
@@ -155,7 +179,7 @@
         </div>
 
         <!-- Floating Buttons: Current Location / Street View (Right Side) -->
-        <div class="absolute top-[120px] right-2.5 z-[500] pointer-events-auto flex flex-col gap-2">
+        <div id="desktopMapTools" class="absolute top-[120px] right-2.5 z-[500] pointer-events-auto flex flex-col gap-2">
             <button id="currentLocationButton" onclick="App.features.locateCurrentPosition()" class="bg-white/95 backdrop-blur-sm shadow-lg border border-blue-300 hover:bg-blue-50 text-blue-700 font-bold p-3 rounded-lg flex items-center justify-center transition-all active:scale-95" title="แสดงตำแหน่งปัจจุบัน" aria-label="แสดงตำแหน่งปัจจุบัน">
                 <i class="fa-solid fa-location-crosshairs text-xl"></i>
             </button>
@@ -165,27 +189,29 @@
         </div>
         
         <!-- Map Project Filter (Bottom Left) -->
-        <div class="absolute bottom-4 left-4 z-[500] bg-white/95 backdrop-blur-sm p-2 rounded-lg shadow-md border border-indigo-200 w-56 pointer-events-auto">
-            <div class="flex items-center justify-between mb-1.5 border-b border-indigo-100 pb-1.5">
-                <span class="font-bold text-indigo-800 text-[11px]"><i class="fa-solid fa-filter mr-1"></i>กรองโครงการบนแผนที่</span>
-                <button type="button" onclick="App.ui.clearMapProjectFilter()" class="text-[10px] font-bold text-gray-500 hover:text-red-600" title="ล้างตัวกรอง"><i class="fa-solid fa-filter-circle-xmark mr-1"></i>ล้าง</button>
+        <div id="mapProjectFilterPanel" class="mobile-filter-collapsed absolute bottom-4 left-4 z-[500] bg-white/95 backdrop-blur-sm p-2 rounded-lg shadow-md border border-indigo-200 w-56 pointer-events-auto">
+            <div class="map-filter-header flex items-center justify-between">
+                <button type="button" onclick="App.ui.toggleMobileMapFilters()" class="font-bold text-indigo-800 text-[11px] text-left" title="เปิดตัวกรองโครงการ"><i class="fa-solid fa-filter mr-1"></i>กรองโครงการบนแผนที่</button>
+                <span class="flex items-center gap-1"><button type="button" onclick="App.ui.clearMapProjectFilter()" class="text-[10px] font-bold text-gray-500 hover:text-red-600" title="ล้างตัวกรอง"><i class="fa-solid fa-filter-circle-xmark mr-1"></i>ล้าง</button><button id="mobileFilterToggle" type="button" onclick="App.ui.toggleMobileMapFilters()" title="เปิดหรือย่อตัวกรอง" aria-label="เปิดตัวกรองโครงการ" aria-expanded="false"><i id="mobileFilterToggleIcon" class="fa-solid fa-chevron-up transition-transform"></i></button></span>
             </div>
-            <div class="grid grid-cols-1 gap-1.5">
-                <select id="mapDistrictFilter" onchange="App.ui.updateMapDistrictFilter()" class="w-full border border-gray-300 rounded-md px-2 py-1 text-[11px] bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
-                    <option value="">ทุกอำเภอ</option>
-                </select>
-                <select id="mapSubdistrictFilter" onchange="App.ui.applyMapSubdistrictFilter()" disabled class="w-full border border-gray-300 rounded-md px-2 py-1 text-[11px] bg-white focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-gray-100 disabled:text-gray-400">
-                    <option value="">เลือกอำเภอก่อน</option>
-                </select>
-                <select id="mapBudgetYearFilter" onchange="App.ui.applyMapBudgetYearFilter()" class="w-full border border-gray-300 rounded-md px-2 py-1 text-[11px] bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
-                    <option value="">ทุกปีที่ดำเนินการ</option>
-                </select>
+            <div id="mapProjectFilterBody" class="mobile-collapsed">
+                <div class="grid grid-cols-1 gap-1.5">
+                    <select id="mapDistrictFilter" onchange="App.ui.updateMapDistrictFilter()" class="w-full border border-gray-300 rounded-md px-2 py-1 text-[11px] bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option value="">ทุกอำเภอ</option>
+                    </select>
+                    <select id="mapSubdistrictFilter" onchange="App.ui.applyMapSubdistrictFilter()" disabled class="w-full border border-gray-300 rounded-md px-2 py-1 text-[11px] bg-white focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-gray-100 disabled:text-gray-400">
+                        <option value="">เลือกอำเภอก่อน</option>
+                    </select>
+                    <select id="mapBudgetYearFilter" onchange="App.ui.applyMapBudgetYearFilter()" class="w-full border border-gray-300 rounded-md px-2 py-1 text-[11px] bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option value="">ทุกปีที่ดำเนินการ</option>
+                    </select>
+                </div>
+                <div id="mapFilterResultCount" class="mt-1.5 text-[9px] text-indigo-700 font-bold text-center bg-indigo-50 rounded px-1.5 py-0.5">แสดงทุกโครงการ</div>
             </div>
-            <div id="mapFilterResultCount" class="mt-1.5 text-[9px] text-indigo-700 font-bold text-center bg-indigo-50 rounded px-1.5 py-0.5">แสดงทุกโครงการ</div>
         </div>
 
         <!-- Coordinate Display (Bottom Right; leaves space for zoom controls) -->
-        <div class="absolute bottom-6 right-16 z-[500] bg-white/95 backdrop-blur-sm p-2.5 rounded shadow-md border border-gray-200 w-48 pointer-events-auto">
+        <div id="coordinatePanel" class="absolute bottom-6 right-16 z-[500] bg-white/95 backdrop-blur-sm p-2.5 rounded shadow-md border border-gray-200 w-48 pointer-events-auto">
             <div class="flex items-center justify-between mb-1.5 border-b border-gray-300 pb-1">
                 <span class="font-bold text-gray-800 text-xs">ระบบพิกัด</span>
                 <select id="coordSystem" class="bg-gray-50 border border-gray-300 text-gray-900 text-[10px] rounded cursor-pointer p-0.5 outline-none">
@@ -204,6 +230,13 @@
             <button onclick="App.features.cancelPicking()" class="pointer-events-auto ml-2 bg-black/20 hover:bg-black/40 text-xs px-3 py-1.5 rounded-full transition-colors">ยกเลิก</button>
         </div>
     </div>
+
+    <nav id="mobileFieldToolbar" aria-label="เครื่องมือภาคสนามสำหรับมือถือ">
+        <button type="button" onclick="App.features.locateCurrentPosition()"><i class="fa-solid fa-location-crosshairs text-blue-600"></i>ตำแหน่งฉัน</button>
+        <button type="button" onclick="App.features.search('')"><i class="fa-solid fa-list-check text-indigo-600"></i>โครงการ</button>
+        <button type="button" onclick="App.features.openMobileNavigationPicker()"><i class="fa-solid fa-diamond-turn-right text-emerald-600"></i>นำทาง</button>
+        <button type="button" onclick="App.features.openNewProposalForm()"><i class="fa-solid fa-file-circle-plus text-amber-600"></i>เพิ่มข้อมูล</button>
+    </nav>
 
     <div id="searchModal" class="fixed inset-0 bg-gray-900/60 z-[3000] hidden items-center justify-center p-4 md:p-6 backdrop-blur-sm transition-opacity">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-7xl h-[85vh] flex flex-col overflow-hidden">
@@ -780,6 +813,19 @@
         <i id="sysToastIcon" class="fa-solid fa-info-circle text-xl"></i><div id="sysToastMsg" class="text-sm font-bold text-gray-700"></div>
     </div>
 
+    <div id="mobileNavigationModal" class="fixed inset-0 bg-gray-900/60 z-[3600] hidden items-end md:items-center justify-center p-0 md:p-5 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-t-2xl md:rounded-2xl shadow-2xl w-full max-w-3xl h-[82vh] md:h-[76vh] flex flex-col overflow-hidden">
+            <div class="bg-emerald-700 text-white px-4 py-3 flex items-center justify-between shrink-0">
+                <div><div class="font-bold"><i class="fa-solid fa-diamond-turn-right mr-2"></i>นำทางไปจุดเริ่มต้นโครงการ</div><div class="text-[10px] text-emerald-100 mt-0.5">เลือกโครงการแล้วเปิดเส้นทางจากตำแหน่งปัจจุบัน</div></div>
+                <button type="button" onclick="App.ui.closeModal('mobileNavigationModal')" class="w-9 h-9 rounded-full bg-emerald-800 hover:bg-emerald-900" aria-label="ปิด"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-3 border-b bg-emerald-50 shrink-0">
+                <div class="relative"><i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400"></i><input id="mobileNavigationSearch" type="search" oninput="App.features.renderMobileNavigationList()" placeholder="ค้นหาชื่อโครงการ อำเภอ ตำบล หรือหน่วยงาน" class="w-full rounded-xl border border-emerald-200 bg-white py-2.5 pl-10 pr-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500"></div>
+            </div>
+            <div id="mobileNavigationList" class="flex-1 overflow-y-auto custom-scroll p-3 space-y-2"></div>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -813,7 +859,7 @@
 
         const App = {
             state: {
-                map: null, layers: {}, currentLatLng: null, tempMarkers: { start: null, end: null }, currentLocationMarker: null, currentLocationCircle: null, currentLocationWatchId: null,
+                map: null, layers: {}, currentLatLng: null, tempMarkers: { start: null, end: null }, currentLocationMarker: null, currentLocationCircle: null, currentLocationWatchId: null, currentLocationLocateRun: 0,
                 previewLayer: null, kmlLayer: null, kmlPolygonLayer: null, currentGeoJSON: null, currentRoutes: [], currentRouteIndex: 0,
                 proposals: [], currentUser: null, isPicking: false, pickingType: null,
                 deleteTargetId: null, editingId: null, charts: { countChart: null, budgetChart: null },
@@ -1185,6 +1231,11 @@
                     });
                     document.getElementById('coordSystem').addEventListener('change', App.ui.updateCoordDisplay);
                     App.ui.updateBudgetYears(localStorage.getItem('planBudgetStartYear') || 2566, false);
+                    document.addEventListener('click', event => {
+                        const panel = document.getElementById('mapProjectFilterPanel');
+                        const body = document.getElementById('mapProjectFilterBody');
+                        if(panel && body && !body.classList.contains('mobile-collapsed') && !panel.contains(event.target)) this.toggleMobileMapFilters(false);
+                    });
                 },
                 updateAgencyList() {
                     const d = document.getElementById('districtInput').value; const dl = document.getElementById('agencyDataList');
@@ -1323,6 +1374,23 @@
                 applyMapBudgetYearFilter() {
                     App.state.mapFilterYear = document.getElementById('mapBudgetYearFilter')?.value || '';
                     App.map.drawMarkers();
+                },
+                toggleMobileMapFilters(forceOpen = null) {
+                    const panel = document.getElementById('mapProjectFilterPanel');
+                    const body = document.getElementById('mapProjectFilterBody');
+                    const button = document.getElementById('mobileFilterToggle');
+                    const icon = document.getElementById('mobileFilterToggleIcon');
+                    if(!panel || !body) return;
+                    const currentlyOpen = !body.classList.contains('mobile-collapsed');
+                    const shouldOpen = forceOpen === null ? !currentlyOpen : Boolean(forceOpen);
+                    body.classList.toggle('mobile-collapsed', !shouldOpen);
+                    panel.classList.toggle('mobile-filter-collapsed', !shouldOpen);
+                    if(button) {
+                        button.setAttribute('aria-expanded', String(shouldOpen));
+                        button.setAttribute('aria-label', shouldOpen ? 'ย่อตัวกรองโครงการ' : 'เปิดตัวกรองโครงการ');
+                    }
+                    if(icon) icon.className = `fa-solid ${shouldOpen ? 'fa-chevron-down' : 'fa-chevron-up'} transition-transform`;
+                    setTimeout(() => App.state.map?.invalidateSize(), 120);
                 },
                 clearMapProjectFilter() {
                     App.state.mapFilterDistrict = '';
@@ -1768,7 +1836,7 @@
                                 </div>
                                 ${selectionPanel}
                                 <div class="px-2 pb-2">
-                                    <button type="button" onclick="App.features.openProjectNavigation(decodeURIComponent('${idToken}'))" class="w-full rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100" title="เปิดแผนที่นำทางจากตำแหน่งปัจจุบันไปยังถนนโครงการ"><i class="fa-solid fa-diamond-turn-right mr-1.5"></i>นำทางไปยังถนน</button>
+                                    <button type="button" onclick="App.features.openProjectNavigation(decodeURIComponent('${idToken}'))" class="w-full rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100" title="เปิดแผนที่นำทางจากตำแหน่งปัจจุบันไปยังพิกัดเริ่มต้นโครงการ"><i class="fa-solid fa-diamond-turn-right mr-1.5"></i>นำทางไปจุดเริ่มต้นโครงการ</button>
                                     <button type="button" onclick="App.features.openAnalyzeForProject(decodeURIComponent('${idToken}'))" class="mt-1.5 w-full rounded-lg border border-fuchsia-200 bg-fuchsia-50 px-3 py-2 text-[11px] font-bold text-fuchsia-700 hover:bg-fuchsia-100" title="เปิดหน้าต่างวิเคราะห์และกรองให้ตรงกับโครงการนี้"><i class="fa-solid fa-chart-area mr-1.5"></i>วิเคราะห์โครงการ</button>
                                 </div>
                                 <div class="grid grid-cols-3 border-t border-pink-100">
@@ -2235,21 +2303,56 @@
                 openProjectNavigation(id) {
                     const project = App.state.proposals.find(item => String(item.id) === String(id));
                     if(!project) return App.ui.showToast('ไม่พบข้อมูลโครงการที่ต้องการนำทาง', 'error');
-                    let lat = Number(project.coordinates?.startLat);
-                    let lng = Number(project.coordinates?.startLng);
-                    if(!Number.isFinite(lat) || !Number.isFinite(lng)) {
-                        let geo = project.geoJSON;
-                        try { if(typeof geo === 'string') geo = JSON.parse(geo); } catch(e) { geo = null; }
-                        const first = geo ? App.roadMeasure.extractLineCoordinates(geo)[0] : null;
-                        lat = Number(first?.[1]);
-                        lng = Number(first?.[0]);
-                    }
+                    const start = this.getProjectStartCoordinate(project);
+                    const lat = start?.lat;
+                    const lng = start?.lng;
                     if(!Number.isFinite(lat) || !Number.isFinite(lng)) return App.ui.showToast('โครงการนี้ยังไม่มีพิกัดสำหรับนำทาง', 'error');
                     const destination = `${lat.toFixed(6)},${lng.toFixed(6)}`;
                     const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=driving`;
                     const navigationWindow = window.open(url, '_blank');
-                    if(navigationWindow) { navigationWindow.opener = null; App.ui.showToast('กำลังเปิดเส้นทางไปยังถนนโครงการ...', 'success'); }
+                    if(navigationWindow) { navigationWindow.opener = null; App.ui.showToast('กำลังเปิดเส้นทางไปยังจุดเริ่มต้นโครงการ...', 'success'); }
                     else App.ui.showToast('เบราว์เซอร์ปิดกั้นหน้าต่างนำทาง กรุณาอนุญาตป๊อปอัป', 'error');
+                },
+                getProjectStartCoordinate(project) {
+                    let lat = Number(project?.coordinates?.startLat);
+                    let lng = Number(project?.coordinates?.startLng);
+                    if(Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+                    let geo = project?.geoJSON;
+                    try { if(typeof geo === 'string') geo = JSON.parse(geo); } catch(e) { geo = null; }
+                    const first = geo ? App.roadMeasure.extractLineCoordinates(geo)[0] : null;
+                    lat = Number(first?.[1]);
+                    lng = Number(first?.[0]);
+                    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+                },
+                openMobileNavigationPicker() {
+                    const input = document.getElementById('mobileNavigationSearch');
+                    if(input) input.value = '';
+                    this.renderMobileNavigationList();
+                    App.ui.openModal('mobileNavigationModal');
+                    setTimeout(() => input?.focus(), 120);
+                },
+                renderMobileNavigationList() {
+                    const container = document.getElementById('mobileNavigationList');
+                    if(!container) return;
+                    const query = String(document.getElementById('mobileNavigationSearch')?.value || '').trim().toLowerCase();
+                    const projects = App.state.proposals
+                        .filter(project => project.projectType !== 'ordinance' && this.getProjectStartCoordinate(project))
+                        .filter(project => {
+                            if(!query) return true;
+                            return [App.ui.getProjectName(project), project.district, App.ui.getSubdistrict(project), project.agencyName, ...App.ui.getBudgetRequestYears(project)]
+                                .join(' ').toLowerCase().includes(query);
+                        })
+                        .slice(0, 150);
+                    if(!projects.length) {
+                        container.innerHTML = '<div class="py-12 text-center text-sm text-gray-500"><i class="fa-solid fa-location-dot mb-3 block text-3xl text-gray-300"></i>ไม่พบโครงการที่มีพิกัดเริ่มต้น</div>';
+                        return;
+                    }
+                    container.innerHTML = projects.map(project => {
+                        const idToken = encodeURIComponent(String(project.id));
+                        const years = App.ui.getBudgetRequestYears(project).join(', ') || '-';
+                        const start = this.getProjectStartCoordinate(project);
+                        return `<div class="rounded-xl border border-gray-200 bg-white p-3 shadow-sm"><div class="text-sm font-bold leading-relaxed text-gray-800">${App.ui.escapeHtml(App.ui.getProjectName(project) || 'ไม่มีชื่อโครงการ')}</div><div class="mt-1 text-[11px] text-gray-500">อ.${App.ui.escapeHtml(project.district || '-')} · ต.${App.ui.escapeHtml(App.ui.getSubdistrict(project) || '-')} · ปี ${App.ui.escapeHtml(years)}</div><div class="mt-1 text-[10px] font-mono text-emerald-700">จุดเริ่มต้น ${start.lat.toFixed(6)}, ${start.lng.toFixed(6)}</div><div class="mt-3 grid grid-cols-[92px_1fr] gap-2"><button type="button" onclick="App.ui.closeModal('mobileNavigationModal'); App.features.panTo(decodeURIComponent('${idToken}'))" class="rounded-lg border border-indigo-200 bg-indigo-50 px-2 py-2 text-xs font-bold text-indigo-700"><i class="fa-solid fa-map-location-dot mr-1"></i>ดูแผนที่</button><button type="button" onclick="App.features.openProjectNavigation(decodeURIComponent('${idToken}'))" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm"><i class="fa-solid fa-diamond-turn-right mr-1.5"></i>นำทางไปจุดเริ่มต้น</button></div></div>`;
+                    }).join('');
                 },
                 checkGeometrySync(p) {
                     if (!p.geoJSON || !p.coordinates || (!p.coordinates.startLat && !p.coordinates.endLat)) return true;
@@ -2321,6 +2424,7 @@
                         App.ui.showToast('อุปกรณ์หรือเบราว์เซอร์นี้ไม่รองรับการระบุตำแหน่ง', 'error');
                         return;
                     }
+                    const locateRun = ++App.state.currentLocationLocateRun;
                     if(App.state.currentLocationWatchId !== null) {
                         navigator.geolocation.clearWatch(App.state.currentLocationWatchId);
                         App.state.currentLocationWatchId = null;
@@ -2331,6 +2435,7 @@
                     }
                     let bestAccuracy = Infinity;
                     let hasPosition = false;
+                    let hasFocused = false;
                     let finished = false;
                     let refineTimer = null;
                     const resetButton = () => {
@@ -2340,7 +2445,7 @@
                         }
                     };
                     const finishRefining = (reason = '') => {
-                        if(finished) return;
+                        if(finished || locateRun !== App.state.currentLocationLocateRun) return;
                         finished = true;
                         if(refineTimer) clearTimeout(refineTimer);
                         if(App.state.currentLocationWatchId !== null) {
@@ -2350,20 +2455,21 @@
                         resetButton();
                         if(hasPosition) {
                             const rounded = Math.round(bestAccuracy);
-                            const message = bestAccuracy <= 20
+                            const message = bestAccuracy <= 35
                                 ? `ยืนยันตำแหน่งแล้ว ความแม่นยำประมาณ ${rounded.toLocaleString()} เมตร`
                                 : `แสดงตำแหน่งที่ดีที่สุดแล้ว ความแม่นยำประมาณ ${rounded.toLocaleString()} เมตร${reason ? ' — ' + reason : ''}`;
                             App.ui.showToast(message, bestAccuracy <= 50 ? 'success' : 'info');
                         }
                     };
-                    const showPosition = (position, sourceLabel = 'กำลังปรับความแม่นยำ') => {
+                    const showPosition = (position, sourceLabel = 'กำลังปรับความแม่นยำ', allowWorseFirst = false) => {
+                        if(finished || locateRun !== App.state.currentLocationLocateRun) return;
                         const lat = position.coords.latitude;
                         const lng = position.coords.longitude;
                         const accuracy = Math.max(1, position.coords.accuracy || 1);
-                        if(hasPosition && accuracy >= bestAccuracy) return;
-                        const firstFix = !hasPosition;
+                        if(hasPosition && accuracy >= bestAccuracy && !allowWorseFirst) return;
                         hasPosition = true;
-                        bestAccuracy = accuracy;
+                        bestAccuracy = Math.min(bestAccuracy, accuracy);
+                        try { localStorage.setItem('planCurrentLocationCache', JSON.stringify({ lat, lng, accuracy, timestamp: Date.now() })); } catch(e) {}
                         const warning = accuracy > 100
                             ? '<div class="mt-2 rounded bg-amber-50 border border-amber-200 px-2 py-1 text-[10px] font-bold text-amber-700">ความแม่นยำยังต่ำ หากเป็น iPad รุ่น Wi-Fi ตำแหน่งอาจอ้างอิงเครือข่ายแทน GPS</div>'
                             : '';
@@ -2384,18 +2490,28 @@
                         App.state.currentLocationMarker.openPopup();
                         App.state.currentLatLng = L.latLng(lat, lng);
                         App.ui.updateCoordDisplay();
-                        if(firstFix) App.state.map.fitBounds(App.state.currentLocationCircle.getBounds(), { padding: [55, 55], maxZoom: 17 });
-                        if(accuracy <= 20) finishRefining();
+                        if(!hasFocused) {
+                            hasFocused = true;
+                            App.state.map.fitBounds(App.state.currentLocationCircle.getBounds(), { padding: [55, 55], maxZoom: 17 });
+                        }
+                        if(accuracy <= 35) finishRefining();
                     };
-                    App.ui.showToast('กำลังแสดงตำแหน่งล่าสุด แล้วปรับความแม่นยำต่อเนื่อง', 'info');
+                    try {
+                        const cached = JSON.parse(localStorage.getItem('planCurrentLocationCache') || 'null');
+                        if(cached && Date.now() - Number(cached.timestamp || 0) <= 300000 && Number.isFinite(Number(cached.lat)) && Number.isFinite(Number(cached.lng))) {
+                            showPosition({ coords: { latitude: Number(cached.lat), longitude: Number(cached.lng), accuracy: Number(cached.accuracy) || 100 } }, 'แสดงตำแหน่งล่าสุดทันที · กำลังตรวจสอบตำแหน่งใหม่', true);
+                        }
+                    } catch(e) {}
+                    App.ui.showToast(hasPosition ? 'แสดงตำแหน่งล่าสุดแล้ว กำลังปรับความแม่นยำ' : 'กำลังค้นหาตำแหน่งปัจจุบัน', 'info');
                     navigator.geolocation.getCurrentPosition(
                         position => showPosition(position, 'แสดงตำแหน่งล่าสุดแล้ว กำลังตรวจสอบให้แม่นยำขึ้น'),
                         () => {},
-                        { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+                        { enableHighAccuracy: false, timeout: 2500, maximumAge: 300000 }
                     );
                     App.state.currentLocationWatchId = navigator.geolocation.watchPosition(position => {
-                        showPosition(position, position.coords.accuracy <= 20 ? 'ตำแหน่งแม่นยำพร้อมใช้งาน' : 'กำลังปรับความแม่นยำต่อเนื่อง');
+                        showPosition(position, position.coords.accuracy <= 35 ? 'ตำแหน่งแม่นยำพร้อมใช้งาน' : 'กำลังปรับความแม่นยำต่อเนื่อง');
                     }, error => {
+                        if(locateRun !== App.state.currentLocationLocateRun) return;
                         const messages = {
                             1: 'ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง กรุณาอนุญาต Location ในเบราว์เซอร์',
                             2: 'ไม่สามารถรับตำแหน่งได้ กรุณาเปิด GPS หรือตรวจสอบสัญญาณ',
@@ -2405,8 +2521,8 @@
                             App.ui.showToast(messages[error.code] || 'เกิดข้อผิดพลาดในการค้นหาตำแหน่ง', 'error');
                             finishRefining();
                         }
-                    }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 3000 });
-                    refineTimer = setTimeout(() => finishRefining(bestAccuracy > 100 ? 'ควรตรวจสอบจุดบนแผนที่ก่อนใช้งาน' : ''), 20000);
+                    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 });
+                    refineTimer = setTimeout(() => finishRefining(bestAccuracy > 100 ? 'ควรตรวจสอบจุดบนแผนที่ก่อนใช้งาน' : ''), 12000);
                 },
                 openStreetView() { App.state.isPicking = true; App.state.pickingType = 'streetview'; App.map.setPickingOverlayInteractivity(true); App.ui.closeModal('proposalModal'); const ov = document.getElementById('pickingOverlay'); ov.className = 'absolute top-6 left-1/2 transform -translate-x-1/2 z-[2000] bg-orange-500 text-white px-6 py-3 rounded-full shadow-2xl font-bold flex items-center gap-3 pointer-events-none transition-all'; document.getElementById('pickingText').innerHTML = 'คลิกจุดบนแผนที่ เพื่อเปิด <b>Street View</b>'; document.getElementById('map').style.cursor = 'crosshair'; },
                 openNewProposalForm() { 
