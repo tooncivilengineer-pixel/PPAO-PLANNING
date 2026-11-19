@@ -1847,7 +1847,6 @@
                             </div>`;
                             
                             layer.bindPopup(t, { closeButton: true, autoClose: true, closeOnClick: false, autoPan: true, maxWidth: 430, className: 'road-hover-popup' });
-                            layer.on('mouseover', e => layer.openPopup(e.latlng));
                             layer.on('click', e => layer.openPopup(e.latlng));
                             layer.addTo(isPolygonLayer ? App.state.kmlPolygonLayer : App.state.kmlLayer);
                             if(selectionInfo.selected && layer.getBounds && layer.getBounds().isValid()) {
@@ -2429,19 +2428,25 @@
                         navigator.geolocation.clearWatch(App.state.currentLocationWatchId);
                         App.state.currentLocationWatchId = null;
                     }
+                    try { localStorage.removeItem('planCurrentLocationCache'); } catch(e) {}
                     if(button) {
                         button.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xl"></i>';
-                        button.title = 'กำลังปรับความแม่นยำของตำแหน่ง';
+                        button.title = 'กำลังรับตำแหน่ง GPS สดจาก iPhone';
                     }
                     let bestAccuracy = Infinity;
+                    let bestPosition = null;
                     let hasPosition = false;
                     let hasFocused = false;
                     let finished = false;
                     let refineTimer = null;
+                    let sampleCount = 0;
+                    let stableCount = 0;
+                    let lastSample = null;
+                    let lastTimestamp = 0;
                     const resetButton = () => {
                         if(button) {
                             button.innerHTML = '<i class="fa-solid fa-location-crosshairs text-xl"></i>';
-                            button.title = 'อัปเดตตำแหน่งปัจจุบัน';
+                            button.title = 'ตรวจสอบตำแหน่งปัจจุบันใหม่';
                         }
                     };
                     const finishRefining = (reason = '') => {
@@ -2455,30 +2460,53 @@
                         resetButton();
                         if(hasPosition) {
                             const rounded = Math.round(bestAccuracy);
-                            const message = bestAccuracy <= 35
-                                ? `ยืนยันตำแหน่งแล้ว ความแม่นยำประมาณ ${rounded.toLocaleString()} เมตร`
-                                : `แสดงตำแหน่งที่ดีที่สุดแล้ว ความแม่นยำประมาณ ${rounded.toLocaleString()} เมตร${reason ? ' — ' + reason : ''}`;
-                            App.ui.showToast(message, bestAccuracy <= 50 ? 'success' : 'info');
+                            const message = bestAccuracy <= 30
+                                ? `ตำแหน่ง GPS พร้อมตรวจสอบโครงการ ความแม่นยำประมาณ ${rounded.toLocaleString()} เมตร`
+                                : `ตำแหน่งยังคลาดเคลื่อนได้ประมาณ ${rounded.toLocaleString()} เมตร${reason ? ' — ' + reason : ''}`;
+                            App.ui.showToast(message, bestAccuracy <= 30 ? 'success' : 'info');
+                        } else {
+                            App.ui.showToast(reason || 'ยังไม่ได้รับตำแหน่ง GPS สด กรุณาตรวจสอบสิทธิ์ตำแหน่งและลองใหม่', 'error');
                         }
                     };
-                    const showPosition = (position, sourceLabel = 'กำลังปรับความแม่นยำ', allowWorseFirst = false) => {
+                    const showPosition = position => {
                         if(finished || locateRun !== App.state.currentLocationLocateRun) return;
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
-                        const accuracy = Math.max(1, position.coords.accuracy || 1);
-                        if(hasPosition && accuracy >= bestAccuracy && !allowWorseFirst) return;
+                        const timestamp = Number(position.timestamp) || Date.now();
+                        const age = Date.now() - timestamp;
+                        if(age > 15000) return;
+                        const lat = Number(position.coords.latitude);
+                        const lng = Number(position.coords.longitude);
+                        const accuracy = Math.max(1, Number(position.coords.accuracy) || 9999);
+                        if(!Number.isFinite(lat) || !Number.isFinite(lng) || accuracy > 5000) return;
+                        if(lastTimestamp && Math.abs(timestamp - lastTimestamp) < 250 && lastSample && lat === lastSample.lat && lng === lastSample.lng) return;
+                        const current = { lat, lng, accuracy, timestamp };
+                        sampleCount += 1;
+                        if(lastSample) {
+                            const movement = App.state.map.distance(L.latLng(lastSample.lat, lastSample.lng), L.latLng(lat, lng));
+                            const stableRadius = Math.max(18, Math.min(80, Math.max(lastSample.accuracy, accuracy) * 1.35));
+                            stableCount = movement <= stableRadius ? stableCount + 1 : 1;
+                            const impossibleJump = movement > Math.max(300, stableRadius * 5) && accuracy >= bestAccuracy;
+                            if(impossibleJump) return;
+                        } else stableCount = 1;
+                        lastSample = current;
+                        lastTimestamp = timestamp;
+                        if(bestPosition && accuracy > bestAccuracy * 1.15) return;
+                        bestPosition = current;
                         hasPosition = true;
                         bestAccuracy = Math.min(bestAccuracy, accuracy);
-                        try { localStorage.setItem('planCurrentLocationCache', JSON.stringify({ lat, lng, accuracy, timestamp: Date.now() })); } catch(e) {}
-                        const warning = accuracy > 100
-                            ? '<div class="mt-2 rounded bg-amber-50 border border-amber-200 px-2 py-1 text-[10px] font-bold text-amber-700">ความแม่นยำยังต่ำ หากเป็น iPad รุ่น Wi-Fi ตำแหน่งอาจอ้างอิงเครือข่ายแทน GPS</div>'
+                        const ready = accuracy <= 30 && stableCount >= 2;
+                        const qualityColor = ready ? 'text-emerald-700' : accuracy <= 80 ? 'text-blue-700' : 'text-amber-700';
+                        const qualityText = ready ? 'ตำแหน่งนิ่งและพร้อมตรวจสอบโครงการ' : accuracy <= 80 ? 'กำลังตรวจสอบความนิ่งของ GPS' : 'ความแม่นยำยังต่ำ กรุณาอยู่กลางแจ้งและรอสักครู่';
+                        const warning = accuracy > 80
+                            ? '<div class="mt-2 rounded bg-amber-50 border border-amber-200 px-2 py-1 text-[10px] font-bold text-amber-700">ยังไม่ควรใช้จุดนี้ตัดสินตำแหน่งโครงการ โปรดรอให้วงความคลาดเคลื่อนเล็กลง</div>'
                             : '';
-                        const popupHtml = `<div class="font-sans min-w-[230px]"><div class="font-bold text-blue-700 mb-2"><i class="fa-solid fa-location-crosshairs mr-1"></i> ตำแหน่งปัจจุบัน</div><div class="text-xs text-gray-700 leading-5">Lat: <b>${lat.toFixed(6)}</b><br>Lng: <b>${lng.toFixed(6)}</b><br>ความแม่นยำประมาณ: <b>${Math.round(accuracy).toLocaleString()} เมตร</b></div><div class="mt-2 text-[10px] font-bold text-blue-600"><i class="fa-solid fa-satellite-dish mr-1"></i>${sourceLabel}</div>${warning}</div>`;
+                        const popupHtml = `<div class="font-sans min-w-[240px]"><div class="font-bold text-blue-700 mb-2"><i class="fa-solid fa-location-crosshairs mr-1"></i> ตำแหน่งปัจจุบันจาก GPS สด</div><div class="text-xs text-gray-700 leading-5">Lat: <b>${lat.toFixed(6)}</b><br>Lng: <b>${lng.toFixed(6)}</b><br>ความคลาดเคลื่อนประมาณ: <b>${Math.round(accuracy).toLocaleString()} เมตร</b><br>ตัวอย่าง GPS ที่รับแล้ว: <b>${sampleCount.toLocaleString()} ครั้ง</b></div><div class="mt-2 text-[10px] font-bold ${qualityColor}"><i class="fa-solid fa-satellite-dish mr-1"></i>${qualityText}</div>${warning}<button type="button" onclick="App.features.locateCurrentPosition()" class="mt-2 w-full rounded bg-blue-600 px-2 py-1.5 text-[10px] font-bold text-white"><i class="fa-solid fa-rotate mr-1"></i>ตรวจตำแหน่งใหม่</button></div>`;
+                        const circleColor = ready ? '#059669' : accuracy <= 80 ? '#2563eb' : '#d97706';
                         if(!App.state.currentLocationCircle) {
-                            App.state.currentLocationCircle = L.circle([lat, lng], { radius: accuracy, color: '#2563eb', weight: 1.5, fillColor: '#60a5fa', fillOpacity: 0.14, interactive: false }).addTo(App.state.map);
+                            App.state.currentLocationCircle = L.circle([lat, lng], { radius: accuracy, color: circleColor, weight: 2, fillColor: circleColor, fillOpacity: 0.12, interactive: false }).addTo(App.state.map);
                         } else {
                             App.state.currentLocationCircle.setLatLng([lat, lng]);
                             App.state.currentLocationCircle.setRadius(accuracy);
+                            App.state.currentLocationCircle.setStyle({ color: circleColor, fillColor: circleColor });
                         }
                         if(!App.state.currentLocationMarker) {
                             const icon = L.divIcon({ className: '', html: '<div class="current-location-pulse"></div>', iconSize: [20, 20], iconAnchor: [10, 10] });
@@ -2493,36 +2521,34 @@
                         if(!hasFocused) {
                             hasFocused = true;
                             App.state.map.fitBounds(App.state.currentLocationCircle.getBounds(), { padding: [55, 55], maxZoom: 17 });
+                        } else if(accuracy <= 30) {
+                            App.state.map.panTo([lat, lng], { animate: true, duration: 0.35 });
                         }
-                        if(accuracy <= 35) finishRefining();
+                        if(accuracy <= 15 || ready) finishRefining();
                     };
-                    try {
-                        const cached = JSON.parse(localStorage.getItem('planCurrentLocationCache') || 'null');
-                        if(cached && Date.now() - Number(cached.timestamp || 0) <= 300000 && Number.isFinite(Number(cached.lat)) && Number.isFinite(Number(cached.lng))) {
-                            showPosition({ coords: { latitude: Number(cached.lat), longitude: Number(cached.lng), accuracy: Number(cached.accuracy) || 100 } }, 'แสดงตำแหน่งล่าสุดทันที · กำลังตรวจสอบตำแหน่งใหม่', true);
-                        }
-                    } catch(e) {}
-                    App.ui.showToast(hasPosition ? 'แสดงตำแหน่งล่าสุดแล้ว กำลังปรับความแม่นยำ' : 'กำลังค้นหาตำแหน่งปัจจุบัน', 'info');
+                    App.ui.showToast('กำลังรับตำแหน่ง GPS สดจาก iPhone กรุณาอยู่กลางแจ้งและรอสักครู่', 'info');
                     navigator.geolocation.getCurrentPosition(
-                        position => showPosition(position, 'แสดงตำแหน่งล่าสุดแล้ว กำลังตรวจสอบให้แม่นยำขึ้น'),
-                        () => {},
-                        { enableHighAccuracy: false, timeout: 2500, maximumAge: 300000 }
+                        showPosition,
+                        error => { if(error.code === 1) finishRefining('กรุณาอนุญาตตำแหน่งที่ตั้งจริงให้ Safari'); },
+                        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
                     );
-                    App.state.currentLocationWatchId = navigator.geolocation.watchPosition(position => {
-                        showPosition(position, position.coords.accuracy <= 35 ? 'ตำแหน่งแม่นยำพร้อมใช้งาน' : 'กำลังปรับความแม่นยำต่อเนื่อง');
-                    }, error => {
+                    App.state.currentLocationWatchId = navigator.geolocation.watchPosition(showPosition, error => {
                         if(locateRun !== App.state.currentLocationLocateRun) return;
                         const messages = {
                             1: 'ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง กรุณาอนุญาต Location ในเบราว์เซอร์',
-                            2: 'ไม่สามารถรับตำแหน่งได้ กรุณาเปิด GPS หรือตรวจสอบสัญญาณ',
-                            3: 'กำลังใช้ตำแหน่งล่าสุด เนื่องจากค้นหาตำแหน่งใหม่ใช้เวลานาน'
+                            2: 'ยังรับสัญญาณ GPS ไม่ได้ กรุณาออกจากอาคารหรือห่างจากหลังคารถ',
+                            3: 'GPS ใช้เวลานานกว่าปกติ ระบบจะรอรับตำแหน่งสดต่อ'
                         };
-                        if(!hasPosition) {
+                        if(error.code === 1) {
                             App.ui.showToast(messages[error.code] || 'เกิดข้อผิดพลาดในการค้นหาตำแหน่ง', 'error');
-                            finishRefining();
+                            finishRefining(messages[error.code]);
+                        } else if(!hasPosition) {
+                            App.ui.showToast(messages[error.code] || 'กำลังรอสัญญาณ GPS', 'info');
                         }
-                    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 });
-                    refineTimer = setTimeout(() => finishRefining(bestAccuracy > 100 ? 'ควรตรวจสอบจุดบนแผนที่ก่อนใช้งาน' : ''), 12000);
+                    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+                    refineTimer = setTimeout(() => finishRefining(hasPosition
+                        ? (bestAccuracy > 80 ? 'ค่าความแม่นยำยังต่ำ ไม่ควรใช้ยืนยันตำแหน่งโครงการ' : 'หากต้องการความแม่นยำเพิ่มให้กดตรวจตำแหน่งใหม่')
+                        : 'ยังไม่ได้รับตำแหน่ง GPS สด กรุณาเปิดตำแหน่งที่ตั้งจริงใน Safari'), 30000);
                 },
                 openStreetView() { App.state.isPicking = true; App.state.pickingType = 'streetview'; App.map.setPickingOverlayInteractivity(true); App.ui.closeModal('proposalModal'); const ov = document.getElementById('pickingOverlay'); ov.className = 'absolute top-6 left-1/2 transform -translate-x-1/2 z-[2000] bg-orange-500 text-white px-6 py-3 rounded-full shadow-2xl font-bold flex items-center gap-3 pointer-events-none transition-all'; document.getElementById('pickingText').innerHTML = 'คลิกจุดบนแผนที่ เพื่อเปิด <b>Street View</b>'; document.getElementById('map').style.cursor = 'crosshair'; },
                 openNewProposalForm() { 
