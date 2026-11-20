@@ -615,12 +615,16 @@
                     <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
                         <h4 class="font-bold text-blue-800 border-b pb-2 mb-4"><i class="fa-solid fa-paperclip mr-2"></i> 7. เอกสารแนบ (รูปภาพสถานที่ / ไฟล์ PDF)</h4>
                         <div class="flex flex-col gap-3">
-                            <div class="flex items-center gap-3">
-                                <button type="button" onclick="document.getElementById('fileAttachmentInput').click()" class="bg-indigo-50 text-indigo-700 font-bold px-4 py-2 rounded-md hover:bg-indigo-100 text-sm border border-indigo-200 shadow-sm transition">
-                                    <i class="fa-solid fa-file-arrow-up mr-2"></i> เลือกไฟล์แนบ
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button type="button" onclick="document.getElementById('cameraAttachmentInput').click()" class="bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-lg hover:bg-emerald-700 text-sm border border-emerald-700 shadow-sm transition touch-manipulation">
+                                    <i class="fa-solid fa-camera mr-2"></i> ถ่ายภาพหน้างาน
                                 </button>
-                                <input type="file" id="fileAttachmentInput" multiple accept="image/*,.pdf" class="hidden" onchange="App.features.handleFileSelect(event)">
-                                <span class="text-xs text-gray-500">รองรับรูปภาพ (JPG, PNG) สูงสุด 6 ภาพต่อโครงการ และไฟล์ PDF</span>
+                                <button type="button" onclick="document.getElementById('fileAttachmentInput').click()" class="bg-indigo-50 text-indigo-700 font-bold px-4 py-2.5 rounded-lg hover:bg-indigo-100 text-sm border border-indigo-200 shadow-sm transition touch-manipulation">
+                                    <i class="fa-solid fa-images mr-2"></i> เลือกรูป / PDF
+                                </button>
+                                <input type="file" id="cameraAttachmentInput" accept="image/*" capture="environment" class="hidden" onchange="App.features.handleFileSelect(event)">
+                                <input type="file" id="fileAttachmentInput" multiple accept="image/*,.pdf,application/pdf" class="hidden" onchange="App.features.handleFileSelect(event)">
+                                <span class="w-full text-xs text-gray-500">สูงสุด 6 ภาพต่อโครงการ ระบบจะย่อภาพทันทีเพื่อให้บันทึกผ่านสัญญาณฮอตสปอตได้เร็วขึ้น</span>
                             </div>
                             <div id="attachmentImageCounter" class="text-xs font-bold text-indigo-700">รูปภาพ 0 / 6 ภาพ</div>
                             <div id="attachmentUploadStatus" class="hidden rounded-lg border px-3 py-2 text-xs font-bold" role="status" aria-live="polite"></div>
@@ -830,7 +834,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+        import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
         const MAX_PROJECT_IMAGES = 6;
 
@@ -853,7 +857,15 @@
         let fApp, auth, db, storage;
         
         try {
-            const firebaseConfig = { apiKey: "AIzaSyDxFfXCG5looRXmriLgGmCSHDpo2_6voBU", authDomain: "toon-civil-gis.firebaseapp.com", projectId: "toon-civil-gis", storageBucket: "toon-civil-gis.appspot.com" };
+            const firebaseConfig = {
+                apiKey: "AIzaSyDxFfXCG5looRXmriLgGmCSHDpo2_6voBU",
+                authDomain: "toon-civil-gis.firebaseapp.com",
+                projectId: "toon-civil-gis",
+                storageBucket: "toon-civil-gis.firebasestorage.app",
+                messagingSenderId: "795968328879",
+                appId: "1:795968328879:web:b494aec8fdab277453f05a",
+                measurementId: "G-WYZCPFCP8L"
+            };
             fApp = initializeApp(firebaseConfig); auth = getAuth(fApp); db = getFirestore(fApp); storage = getStorage(fApp);
         } catch(e) { console.error("Firebase Init Error", e); }
 
@@ -863,7 +875,7 @@
                 previewLayer: null, kmlLayer: null, kmlPolygonLayer: null, currentGeoJSON: null, currentRoutes: [], currentRouteIndex: 0,
                 proposals: [], currentUser: null, isPicking: false, pickingType: null,
                 deleteTargetId: null, editingId: null, charts: { countChart: null, budgetChart: null },
-                attachments: [], existingAttachments: [], attachmentUploadCache: new Map(), upgradeTargetId: null,
+                attachments: [], existingAttachments: [], attachmentUploadCache: new Map(), attachmentPreparing: false, upgradeTargetId: null,
                 spatialLayers: { slope:null, flood:null, community:null, road:null, facility:null },
                 spatialLayerNames: {}, spatialResults: [], spatialDisplayLayer: null, spatialHighlightLayer: null,
                 forestLayer: null, forestFeatureLayers: new Map(), forestVisible: false,
@@ -2672,7 +2684,8 @@
                             img.onerror = () => { clearTimeout(timer); reject(new Error('ไม่สามารถอ่านรูปนี้ได้ กรุณาตั้งค่ากล้องเป็น Most Compatible หรือเลือกรูป JPG')); };
                             img.src = sourceUrl;
                         });
-                        const maxDimension = 1400;
+                        // ใช้แนวทางเดียวกับระบบบริหารโครงการ: ย่อภาพก่อนเก็บกับข้อมูลโครงการโดยตรง
+                        const maxDimension = 800;
                         let width = image.naturalWidth || image.width;
                         let height = image.naturalHeight || image.height;
                         const scale = Math.min(1, maxDimension / Math.max(width, height));
@@ -2685,7 +2698,24 @@
                         context.fillStyle = '#ffffff';
                         context.fillRect(0, 0, width, height);
                         context.drawImage(image, 0, 0, width, height);
-                        const blob = await new Promise((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('ไม่สามารถบีบอัดรูปภาพได้')), 'image/jpeg', 0.72));
+                        const canvasToJpeg = (targetCanvas, quality) => new Promise((resolve, reject) => targetCanvas.toBlob(value => value ? resolve(value) : reject(new Error('ไม่สามารถบีบอัดรูปภาพได้')), 'image/jpeg', quality));
+                        let blob = await canvasToJpeg(canvas, 0.58);
+                        // จำกัดขนาดต่อภาพ เพื่อให้ 6 ภาพยังอยู่ภายในขนาดเอกสาร Firestore
+                        for(const quality of [0.50, 0.42, 0.34]) {
+                            if(blob.size <= 90 * 1024) break;
+                            blob = await canvasToJpeg(canvas, quality);
+                        }
+                        if(blob.size > 90 * 1024 && Math.max(width, height) > 640) {
+                            const smallScale = 640 / Math.max(width, height);
+                            const smallCanvas = document.createElement('canvas');
+                            smallCanvas.width = Math.max(1, Math.round(width * smallScale));
+                            smallCanvas.height = Math.max(1, Math.round(height * smallScale));
+                            const smallContext = smallCanvas.getContext('2d', { alpha:false });
+                            smallContext.fillStyle = '#ffffff';
+                            smallContext.fillRect(0, 0, smallCanvas.width, smallCanvas.height);
+                            smallContext.drawImage(canvas, 0, 0, smallCanvas.width, smallCanvas.height);
+                            blob = await canvasToJpeg(smallCanvas, 0.38);
+                        }
                         const baseName = String(file.name || `photo_${Date.now()}`).replace(/\.[^.]+$/, '');
                         return { blob, name:`${baseName}.jpg`, type:'image/jpeg' };
                     } finally {
@@ -2693,17 +2723,53 @@
                     }
                 },
                 async uploadAttachmentWithRetry(file, projectId, index, total) {
-                    if(!storage) throw new Error('ระบบจัดเก็บรูปภาพยังไม่พร้อม กรุณาตรวจสอบอินเทอร์เน็ตแล้วกดบันทึกอีกครั้ง');
-                    const optimized = await this.optimizeAttachmentForUpload(file);
+                    const optimized = file?._toonOptimized || file?._toonKeepOriginal
+                        ? { blob:file, name:file.name || `attachment_${index + 1}`, type:file.type || 'application/octet-stream' }
+                        : await this.optimizeAttachmentForUpload(file);
+                    // รูปภาพเก็บแบบ Data URL ในเอกสารโครงการเช่นเดียวกับระบบ CM
+                    // ลดขั้นตอนอัปโหลด Storage ซึ่งเป็นจุดที่ล้มเหลวเมื่อใช้งานภาคสนามผ่านฮอตสปอต
+                    if((optimized.type || '').startsWith('image/') && !file?._toonKeepOriginal) {
+                        this.setAttachmentUploadStatus(`กำลังเตรียมภาพที่ ${index + 1}/${total} สำหรับบันทึกกับข้อมูลโครงการ`, 'progress');
+                        const dataUrl = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = () => reject(new Error('ไม่สามารถอ่านข้อมูลรูปภาพได้'));
+                            reader.readAsDataURL(optimized.blob);
+                        });
+                        return { name:optimized.name, url:dataUrl, type:'image/jpeg' };
+                    }
+                    if(!storage) throw new Error('ระบบจัดเก็บไฟล์ PDF ยังไม่พร้อม กรุณาตรวจสอบอินเทอร์เน็ตแล้วกดบันทึกอีกครั้ง');
+                    if(auth && !auth.currentUser) await signInAnonymously(auth);
                     const safeFileName = String(optimized.name || `attachment_${index + 1}`).replace(/[^a-zA-Z0-9.\-_]/g, '_');
                     const fileRef = ref(storage, `artifacts/${canvasAppId}/public/data/proposals/${projectId}/${Date.now()}_${index + 1}_${safeFileName}`);
                     let lastError = null;
                     for(let attempt = 1; attempt <= 3; attempt++) {
                         this.setAttachmentUploadStatus(`กำลังอัปโหลดไฟล์ที่ ${index + 1}/${total}${attempt > 1 ? ` — ลองใหม่ครั้งที่ ${attempt}` : ''}`, 'progress');
                         try {
-                            const uploadPromise = uploadBytes(fileRef, optimized.blob, { contentType:optimized.type }).then(() => getDownloadURL(fileRef));
-                            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('อัปโหลดเกิน 120 วินาที')), 120000));
-                            const url = await Promise.race([uploadPromise, timeoutPromise]);
+                            const url = await new Promise((resolve, reject) => {
+                                const uploadTask = uploadBytesResumable(fileRef, optimized.blob, { contentType:optimized.type });
+                                let stallTimer = null;
+                                const resetStallTimer = () => {
+                                    if(stallTimer) clearTimeout(stallTimer);
+                                    stallTimer = setTimeout(() => {
+                                        uploadTask.cancel();
+                                        reject(new Error('ไม่มีความคืบหน้าในการอัปโหลดเกิน 180 วินาที'));
+                                    }, 180000);
+                                };
+                                resetStallTimer();
+                                uploadTask.on('state_changed', snapshot => {
+                                    resetStallTimer();
+                                    const percent = snapshot.totalBytes ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100) : 0;
+                                    this.setAttachmentUploadStatus(`กำลังอัปโหลดไฟล์ที่ ${index + 1}/${total} — ${percent}%${attempt > 1 ? ` (ลองใหม่ครั้งที่ ${attempt})` : ''}`, 'progress');
+                                }, error => {
+                                    if(stallTimer) clearTimeout(stallTimer);
+                                    reject(error);
+                                }, async () => {
+                                    if(stallTimer) clearTimeout(stallTimer);
+                                    try { resolve(await getDownloadURL(uploadTask.snapshot.ref)); }
+                                    catch(error) { reject(error); }
+                                });
+                            });
                             return { name:optimized.name, url, type:optimized.type };
                         } catch(error) {
                             lastError = error;
@@ -2713,30 +2779,89 @@
                     throw new Error(`อัปโหลด ${file.name || 'ไฟล์แนบ'} ไม่สำเร็จ: ${lastError?.message || 'สัญญาณอินเทอร์เน็ตขัดข้อง'}`);
                 },
                 async migrateInlineAttachment(attachment, projectId, index, total) {
-                    if(!attachment?.url?.startsWith('data:')) return attachment;
-                    const response = await fetch(attachment.url);
-                    const blob = await response.blob();
-                    const file = new File([blob], attachment.name || `attachment_${index + 1}`, { type:attachment.type || blob.type || 'application/octet-stream' });
-                    return this.uploadAttachmentWithRetry(file, projectId, index, total);
+                    // ภาพเดิมที่เก็บแบบ Data URL ใช้งานต่อได้ทันที ไม่ย้ายไป Storage
+                    return attachment;
                 },
-                handleFileSelect(evt) {
+                readImageLikeConstructionSystem(file) {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onerror = () => reject(new Error('ไม่สามารถอ่านไฟล์รูปภาพได้'));
+                        reader.onload = event => {
+                            const image = new Image();
+                            image.onerror = () => reject(new Error('อุปกรณ์ไม่สามารถเปิดรูปนี้ได้ กรุณาเลือกรูป JPG หรือใช้การตั้งค่ากล้อง Most Compatible'));
+                            image.onload = () => {
+                                try {
+                                    const canvas = document.createElement('canvas');
+                                    let width = image.width || image.naturalWidth;
+                                    let height = image.height || image.naturalHeight;
+                                    const scale = Math.min(1, 800 / Math.max(width, height));
+                                    width = Math.max(1, Math.round(width * scale));
+                                    height = Math.max(1, Math.round(height * scale));
+                                    canvas.width = width;
+                                    canvas.height = height;
+                                    const context = canvas.getContext('2d');
+                                    context.drawImage(image, 0, 0, width, height);
+                                    let dataUrl = '';
+                                    for(const quality of [0.55, 0.45, 0.35, 0.28]) {
+                                        dataUrl = canvas.toDataURL('image/jpeg', quality);
+                                        if(dataUrl.length <= 120000) break;
+                                    }
+                                    const baseName = String(file.name || `photo_${Date.now()}`).replace(/\.[^.]+$/, '');
+                                    resolve({
+                                        name:`${baseName}.jpg`,
+                                        url:dataUrl,
+                                        type:'image/jpeg',
+                                        size:Math.max(0, Math.round((dataUrl.length - dataUrl.indexOf(',') - 1) * 0.75)),
+                                        inline:true
+                                    });
+                                } catch(error) { reject(error); }
+                            };
+                            image.src = event.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                },
+                async handleFileSelect(evt) {
                     const files = Array.from(evt.target.files || []);
+                    evt.target.value = '';
+                    if(files.length === 0) return;
+                    App.state.attachmentPreparing = true;
                     const currentImageCount = [...App.state.existingAttachments, ...App.state.attachments].filter(file => this.isImageAttachment(file)).length;
                     let remainingImages = Math.max(0, MAX_PROJECT_IMAGES - currentImageCount);
-                    const acceptedFiles = [];
+                    let acceptedCount = 0;
                     let rejectedImageCount = 0;
-                    files.forEach(file => {
-                        if(this.isImageAttachment(file)) {
-                            if(remainingImages <= 0) { rejectedImageCount++; return; }
-                            remainingImages--;
+                    let failedImageCount = 0;
+                    this.setAttachmentUploadStatus(`กำลังอ่านรูปภาพ 0/${files.length} กรุณารอสักครู่`, 'progress');
+                    try {
+                        for(let fileIndex = 0; fileIndex < files.length; fileIndex++) {
+                            const file = files[fileIndex];
+                            if(this.isImageAttachment(file)) {
+                                if(remainingImages <= 0) { rejectedImageCount++; continue; }
+                                remainingImages--;
+                                this.setAttachmentUploadStatus(`กำลังอ่านและย่อรูปภาพ ${fileIndex + 1}/${files.length}`, 'progress');
+                                try {
+                                    const preparedImage = await this.readImageLikeConstructionSystem(file);
+                                    App.state.attachments.push(preparedImage);
+                                    acceptedCount++;
+                                    // แสดงตัวอย่างทันทีที่อ่านรูปแต่ละภาพเสร็จ เหมือนระบบบริหารโครงการ
+                                    this.renderAttachments();
+                                } catch(error) {
+                                    failedImageCount++;
+                                    console.error('Image read error:', error);
+                                }
+                            } else {
+                                App.state.attachments.push(file);
+                                acceptedCount++;
+                                this.renderAttachments();
+                            }
                         }
-                        acceptedFiles.push(file);
-                    });
-                    App.state.attachments = [...App.state.attachments, ...acceptedFiles];
-                    this.renderAttachments();
-                    if(acceptedFiles.length > 0) this.setAttachmentUploadStatus(`เลือกไฟล์แล้ว ${acceptedFiles.length} ไฟล์ — กด “บันทึกแล้วปิด” เพื่อบีบอัดและอัปโหลด`, 'info');
+                    } finally {
+                        App.state.attachmentPreparing = false;
+                    }
+                    if(acceptedCount > 0) this.setAttachmentUploadStatus(`แสดงรูปและเตรียมไฟล์พร้อมแล้ว ${acceptedCount} ไฟล์ — กด “บันทึกแล้วปิด”`, 'success');
+                    else this.setAttachmentUploadStatus('ยังไม่สามารถอ่านรูปที่เลือกได้ กรุณาเลือกรูป JPG หรือถ่ายด้วยโหมด Most Compatible', 'error');
+                    if(failedImageCount > 0) App.ui.showToast(`อ่านรูปไม่สำเร็จ ${failedImageCount} ภาพ กรุณาเลือกรูป JPG`, 'error');
                     if(rejectedImageCount > 0) App.ui.showToast(`แนบรูปได้สูงสุด ${MAX_PROJECT_IMAGES} ภาพต่อโครงการ ระบบข้าม ${rejectedImageCount} ภาพที่เกิน`, 'error');
-                    evt.target.value = '';
                 },
                 removeAttachment(index, isExisting = false) {
                     if(isExisting) App.state.existingAttachments.splice(index, 1);
@@ -2757,9 +2882,10 @@
                         html += `<div class="flex justify-between items-center bg-gray-50 p-2 rounded border text-sm"><div class="flex items-center gap-2"><i class="fa-solid ${icon} text-lg"></i><a href="${f.url}" target="_blank" class="text-blue-600 hover:underline truncate max-w-[200px] md:max-w-md font-medium">${f.name}</a></div><button type="button" onclick="App.features.removeAttachment(${i}, true)" class="text-red-500 hover:text-red-700 p-1" title="ลบไฟล์เดิม"><i class="fa-solid fa-trash-can"></i></button></div>`;
                     });
                     App.state.attachments.forEach((f, i) => {
-                        const icon = f.type.includes('pdf') ? 'fa-file-pdf text-red-400' : 'fa-image text-blue-400';
-                        const size = (f.size / 1024 / 1024).toFixed(2);
-                        html += `<div class="flex justify-between items-center bg-indigo-50/50 p-2 rounded border border-indigo-100 text-sm"><div class="flex items-center gap-2"><i class="fa-solid ${icon} text-lg"></i><span class="truncate max-w-[200px] md:max-w-md text-gray-700 font-medium">${f.name} <span class="text-xs text-gray-400">(${size} MB)</span></span><span class="text-[10px] bg-amber-100 text-amber-800 px-2 py-1 rounded font-bold border border-amber-300 shadow-sm"><i class="fa-solid fa-hand-pointer mr-1"></i> รอกดปุ่มบันทึกด้านล่าง</span></div><button type="button" onclick="App.features.removeAttachment(${i}, false)" class="text-red-500 hover:text-red-700 p-1" title="ยกเลิกไฟล์นี้"><i class="fa-solid fa-xmark"></i></button></div>`;
+                        const icon = (f.type || '').includes('pdf') ? 'fa-file-pdf text-red-400' : 'fa-image text-blue-400';
+                        const size = ((Number(f.size) || 0) / 1024 / 1024).toFixed(2);
+                        const preview = f.url?.startsWith('data:image/') ? `<img src="${f.url}" class="w-14 h-14 object-cover rounded border border-indigo-200 shrink-0" alt="ตัวอย่างรูป">` : `<i class="fa-solid ${icon} text-lg"></i>`;
+                        html += `<div class="flex justify-between items-center bg-indigo-50/50 p-2 rounded border border-indigo-100 text-sm"><div class="flex items-center gap-2 min-w-0">${preview}<span class="truncate max-w-[180px] md:max-w-md text-gray-700 font-medium">${f.name} <span class="text-xs text-gray-400">(${size} MB)</span></span><span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-1 rounded font-bold border border-emerald-300 shadow-sm shrink-0"><i class="fa-solid fa-check mr-1"></i> พร้อมบันทึก</span></div><button type="button" onclick="App.features.removeAttachment(${i}, false)" class="text-red-500 hover:text-red-700 p-2" title="ยกเลิกไฟล์นี้"><i class="fa-solid fa-xmark"></i></button></div>`;
                     });
                     list.innerHTML = html;
                 },
@@ -3417,6 +3543,7 @@
                 loadLocal() { try { const data = localStorage.getItem('localProposals'); if(data) { App.state.proposals = JSON.parse(data); App.map.drawMarkers(); App.ui.updateOrdinanceFolderCount(); } } catch(e){} },
                 
                 async saveProposal(isContinuous = false) {
+                    if(App.state.attachmentPreparing) return App.ui.showToast("ระบบกำลังย่อรูปภาพ กรุณารอข้อความ ‘เตรียมไฟล์พร้อมแล้ว’ ก่อนกดบันทึก", "info");
                     const dist = document.getElementById('districtInput').value;
                     const agc = document.getElementById('agencyName').value;
                     const subdistrict = document.getElementById('subdistrictInput').value.trim() || App.ui.extractSubdistrict(agc);
@@ -3468,16 +3595,21 @@
                             }
                         }
                         for(const file of App.state.attachments) {
-                            const cacheKey = `${file.name}|${file.size}|${file.lastModified}`;
-                            let uploaded = App.state.attachmentUploadCache.get(cacheKey);
-                            if(!uploaded) {
-                                uploaded = await App.features.uploadAttachmentWithRetry(file, id, uploadIndex, uploadTotal);
-                                App.state.attachmentUploadCache.set(cacheKey, uploaded);
+                            let uploaded;
+                            if(file?.url?.startsWith('data:image/')) {
+                                uploaded = file;
+                            } else {
+                                const cacheKey = `${file.name}|${file.size}|${file.lastModified}`;
+                                uploaded = App.state.attachmentUploadCache.get(cacheKey);
+                                if(!uploaded) {
+                                    uploaded = await App.features.uploadAttachmentWithRetry(file, id, uploadIndex, uploadTotal);
+                                    App.state.attachmentUploadCache.set(cacheKey, uploaded);
+                                }
                             }
                             finalAttachments.push(uploaded);
                             uploadIndex++;
                         }
-                        if(uploadTotal > 0) App.features.setAttachmentUploadStatus(`อัปโหลดไฟล์ครบ ${uploadTotal}/${uploadTotal} แล้ว กำลังบันทึกข้อมูลโครงการ`, 'success');
+                        if(uploadTotal > 0) App.features.setAttachmentUploadStatus(`เตรียมรูปและไฟล์ครบ ${uploadTotal}/${uploadTotal} แล้ว กำลังบันทึกข้อมูลโครงการ`, 'success');
 
                         const sanitizedAttachments = finalAttachments.map(att => ({
                             name: att?.name || 'unnamed_file', url: att?.url || '', type: att?.type || ''
@@ -3539,7 +3671,7 @@
                         
                         if(db) {
                             const dbPromise = setDoc(doc(db, 'artifacts', canvasAppId, 'public', 'data', 'proposals', id), d);
-                            const dbTimeout = new Promise((_, rej) => setTimeout(() => rej(new Error("DB timeout")), 8000));
+                            const dbTimeout = new Promise((_, rej) => setTimeout(() => rej(new Error("การบันทึกข้อมูลใช้เวลานานเกิน 45 วินาที กรุณาตรวจสอบสัญญาณแล้วกดบันทึกอีกครั้ง")), 45000));
                             await Promise.race([dbPromise, dbTimeout]);
                         }
                         const savedIndex=App.state.proposals.findIndex(p=>p.id===id); if(savedIndex>=0)App.state.proposals[savedIndex]={id,...d}; else App.state.proposals.push({id,...d});
